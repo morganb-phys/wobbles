@@ -1,0 +1,3 @@
+[console_scripts]
+wobbles = wobbles.cli:main
+

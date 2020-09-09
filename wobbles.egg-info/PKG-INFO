@@ -1,0 +1,68 @@
+Metadata-Version: 1.2
+Name: wobbles
+Version: 0.1.0
+Summary: Perturb orbits in a one-dimensional potential given an external force using LPT.
+Home-page: https://github.com/morganb-phys/wobbles
+Author: Morgan Jane Bennett
+Author-email: bennett@astro.utoronto.ca
+License: BSD license
+Description: =======
+        wobbles
+        =======
+        
+        
+        .. image:: https://img.shields.io/pypi/v/wobbles.svg
+                :target: https://pypi.python.org/pypi/wobbles
+        
+        .. image:: https://img.shields.io/travis/morganb-phys/wobbles.svg
+                :target: https://travis-ci.com/morganb-phys/wobbles
+        
+        .. image:: https://readthedocs.org/projects/wobbles/badge/?version=latest
+                :target: https://wobbles.readthedocs.io/en/latest/?badge=latest
+                :alt: Documentation Status
+        
+        
+        
+        
+        Perturb orbits in a one-dimensional potential given an external force using LPT.
+        
+        
+        * Free software: BSD license
+        * Documentation: https://wobbles.readthedocs.io.
+        
+        
+        Features
+        --------
+        
+        * TODO
+        
+        Credits
+        -------
+        
+        This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+        
+        .. _Cookiecutter: https://github.com/audreyr/cookiecutter
+        .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+        
+        
+        =======
+        History
+        =======
+        
+        0.1.0 (2020-09-08)
+        ------------------
+        
+        * First release on PyPI.
+        
+Keywords: wobbles
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Requires-Python: >=3.5
