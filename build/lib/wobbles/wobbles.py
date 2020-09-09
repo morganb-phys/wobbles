@@ -19,9 +19,9 @@ import time
 import tqdm
 from scipy.interpolate import interp1d
 
-class StellarDisc():
+class Disc():
     
-    def __init__(self,discpot,zlim,vlim,times=np.linspace(0,1,1001)*u.Gyr,zpt=101,vpt=101,zarray=False,varray=False):
+    def __init__(self,discpot,zlim,vlim,times=np.linspace(0,1,1001)*u.Gyr,zpt=31,vpt=31,zarray=False,varray=False):
     
         """
         NAME:
@@ -29,12 +29,16 @@ class StellarDisc():
         PURPOSE:
            Initialize a vertical disc in equilibrium
         INPUT:
-           pot - should be a 1-dimensional potential
-           zlim - maximum height of the galactic disc in kpc
-           vlim - maximum velocity of the galactic disc in km/s
+           pot (galpy potential) - should be a 1-dimensional potential
+           zlim (float) - maximum height of the galactic disc in kpc
+           vlim (float) - maximum velocity of the galactic disc in km/s
         OPTIONAL INPUTS:
-           times - time array over which to integrate the disc orbits. 
+           times (array) - time array over which to integrate the disc orbits. 
                     Otherwise, it defaults to 1001 timesteps over 5 Gyr.
+           zpt (int) - number of phase-space points along the z-axis
+           vpt (int) - number of phase-space points along the vz-axis
+           zarray (boolean) - if True, zlim is an array specifying the points along the z-axis at which to calculte the perturbation
+           varray (boolean) - if True, vlim is an array specifying the points along the vz-axis at which to calculte the perturbation
         OUTPUT:
            instance
         """
