@@ -15,7 +15,6 @@ from scipy.optimize import minimize
 from scipy.interpolate import interp1d
 from galpy.potential import evaluatezforces,evaluateRforces, turn_physical_off, verticalfreq,evaluatelinearPotentials
 from galpy.util.bovy_conversion import dens_in_msolpc3
-import time
 import tqdm
 from scipy.interpolate import interp1d
 
@@ -166,8 +165,8 @@ class Disc():
                 saty= np.array([np.roll(s,nt-int(i)) for  i,s in enumerate(saty)])
                 satz= np.array([np.roll(s,nt-int(i)) for  i,s in enumerate(satz)])[:,:,None,None]
 
-                dx= np.tile(freq*np.cos(self.t),(nt,1))-satx
-                dy= np.tile(freq*np.sin(self.t),(nt,1))-saty
+                dx= np.tile(np.cos(freq*self.t),(nt,1))-satx
+                dy= np.tile(np.sin(freq*self.t),(nt,1))-saty
                 F= evaluatezforces(satpot,R=np.sqrt(dx**2+dy**2)[:,:,None,None],z=(discz-satz))
                 discz,satx,saty,satz= np.array([[],[],[],[]])
                 
@@ -179,8 +178,8 @@ class Disc():
                 F= [None]*len(self.t)
                 nt= len(self.t)
                 for i in range(nt):
-                    dx= freq*np.cos(self.t[(nt-i-1):])-sat.x(self.t[(nt-i-1):])
-                    dy= freq*np.sin(self.t[(nt-i-1):])-sat.y(self.t[(nt-i-1):])
+                    dx= np.cos(freq*self.t[(nt-i-1):])-sat.x(self.t[(nt-i-1):])
+                    dy= np.sin(freq*self.t[(nt-i-1):])-sat.y(self.t[(nt-i-1):])
                     F[i]= evaluatezforces(satpot,R=np.sqrt(dx**2+dy**2),
                                            z=(self.discOrb.x(self.t[:i+1]))-sat.z(self.t[(nt-i-1):]))
                     if i==0:
