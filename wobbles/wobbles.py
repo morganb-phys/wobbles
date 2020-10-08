@@ -243,7 +243,7 @@ class Disc():
         
         else:
             if integ:
-                dJ= simps(vel*force,self.t,axis=2)/self.Oz[:,:,None]
+                dJ= simps(vel*force,self.t,axis=2)/self.Oz
             else:
                 dJ= (np.sum(vel*force,axis=2)*(self.t[1]-self.t[0])/self.Oz)[:,:,None]
             return dJ
@@ -344,11 +344,11 @@ class Disc():
             freq= verticalfreq(self.pot,1.)
         except:
             freq= self.VertFreq()
-        self.f0= self.df.calc_df(self.Jz[:,:,None]+self.deltaJ,freq)
+        self.f0= self.df.calc_df(self.Jz+self.deltaJ,freq)
         
         if integ:
-            self.rho= simps(self.f0,self.v,axis=1)
-            self.meanV= simps(self.f0*self.v[None,:,None],axis=1)/simps(self.f0,axis=1)
+            self.rho= simps(self.f0,self.v,axis=1)[:,None]
+            self.meanV= simps(self.f0*self.v[None,:],axis=1)/simps(self.f0,axis=1)
         else:
             self.rho= np.sum(self.f0,axis=1)*(self.v[1]-self.v[0])
             self.meanV= np.sum(np.atleast_2d(self.v[None,:,None])*self.f0,axis=1)/self.f0.sum(axis=1)
@@ -441,7 +441,7 @@ class Disc():
         
         if integ:
             rho= simps(f0,self.v,axis=1)
-            meanV= simps(f0*self.v[None,:,None],axis=1)/simps(f0,axis=1)
+            meanV= simps(f0*self.v[None,:],axis=1)/simps(f0,axis=1)
         else:
             rho= np.sum(f0,axis=1)*(self.v[1]-self.v[0])
             meanV= np.sum(np.atleast_2d(self.v[None,:,None])*f0,axis=1)/f0.sum(axis=1)
