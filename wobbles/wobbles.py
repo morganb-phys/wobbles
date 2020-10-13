@@ -193,8 +193,8 @@ class Disc():
                 F= [None]*len(self.t)
                 nt= len(self.t)
                 for i in range(nt):
-                    dx= freq*np.cos(self.t[(nt-i-1):])-sat.x(self.t[(nt-i-1):])
-                    dy= freq*np.sin(self.t[(nt-i-1):])-sat.y(self.t[(nt-i-1):])
+                    dx= np.cos(freq*self.t[(nt-i-1):])-sat.x(self.t[(nt-i-1):])
+                    dy= np.sin(freq*self.t[(nt-i-1):])-sat.y(self.t[(nt-i-1):])
                     F[i]= evaluatezforces(satpot,R=np.sqrt(dx**2+dy**2),
                                            z=(self.discOrb[tstep].x(self.t[:i+1]))-sat.z(self.t[(nt-i-1):]))
                     if i==0:
@@ -204,7 +204,7 @@ class Disc():
                 return F
             
         else:
-            dx,dy,dz= freq*np.cos(self.t)-sat.x(self.t), freq*np.sin(self.t)-sat.y(self.t), self.discOrb.x(self.t)-sat.z(self.t)
+            dx,dy,dz= np.cos(freq*self.t)-sat.x(self.t), np.sin(freq*self.t)-sat.y(self.t), self.discOrb.x(self.t)-sat.z(self.t)
             dR= np.sqrt(dx**2.+dy**2.)
             
             F= evaluatezforces(satpot,R=dR,z=dz)
