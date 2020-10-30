@@ -345,7 +345,7 @@ class Disc():
         except:
             freq= self.VertFreq()
         self.f0= self.df.calc_df(self.Jz+self.deltaJ,freq)
-
+        
         if integ:
             self.rho= simps(self.f0,self.v,axis=1)[:,None]
             self.meanV= simps(self.f0*self.v[None,:],axis=1)/simps(self.f0,axis=1)
