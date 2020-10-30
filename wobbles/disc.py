@@ -56,7 +56,8 @@ class Disc(object):
 
         return dF
 
-    def satellite_forces(self, time_units_internal, satellite_orbit_list, satellite_potentials_list, verbose=False):
+    def satellite_forces(self, sat_time_units_internal, satellite_orbit_list, satellite_potentials_list,
+                         phase_space_orbits, orb_time_units_internal=None,verbose=False):
 
         """
         Computes the force exterted by a passing satellite (or satellites) in the z direction
@@ -70,16 +71,19 @@ class Disc(object):
         """
 
         assert len(satellite_orbit_list) == len(satellite_potentials_list)
-        phase_space_orbits = self.orbits_in_phase_space(time_units_internal)
+        
+        orb_time_units_internal= sat_time_units_internal if orb_time_units_internal is None else orb_time_units_internal
+        
         force = 0
 
         for (orbit, potential) in zip(satellite_orbit_list, satellite_potentials_list):
-            new_force = self._satellite_force(time_units_internal, orbit, phase_space_orbits, potential, verbose)
+            new_force = self._satellite_force(sat_time_units_internal, orbit, orb_time_units_internal, 
+                                              phase_space_orbits, potential, verbose)
             force += new_force
 
         return force
 
-    def action_impulse(self, force, time_internal_units, satellite_orbit_list, satellite_potentials_list):
+    def action_impulse(self, force, time_internal_units, satellite_orbit_list, satellite_potentials_list, phase_space_orbits):
 
         """
         Computes the perturbation to the action from the passing satellite
@@ -96,8 +100,6 @@ class Disc(object):
 
         assert len(satellite_orbit_list) == len(satellite_potentials_list)
 
-        phase_space_orbits = self.orbits_in_phase_space(time_internal_units)
-
         v_z = phase_space_orbits.vx(time_internal_units)
 
         time_step = time_internal_units[1] - time_internal_units[0]
@@ -106,7 +108,7 @@ class Disc(object):
 
         return delta_J
 
-    def _satellite_force(self, time, satellite_orbit_physical_off, phase_space_orbits_physical_off,
+    def _satellite_force(self, sat_time, satellite_orbit_physical_off, orb_time, phase_space_orbits_physical_off,
                         satellite_potential_physical_off, verbose):
 
         r_over_r0 = self.potential_extension.R_over_R0_eval
@@ -119,9 +121,9 @@ class Disc(object):
             print('evaluating at r_ovver_r0 = '+str(r_over_r0))
             print('evaluating at vc_over_v0 = ' + str(vc_over_v0))
 
-        dx = r_over_r0 * np.cos(freq * time) - satellite_orbit_physical_off.x(time)
-        dy = r_over_r0 * np.sin(freq * time) - satellite_orbit_physical_off.y(time)
-        dz = phase_space_orbits_physical_off.x(time) - satellite_orbit_physical_off.z(time)
+        dx = r_over_r0 * np.cos(freq * sat_time) - satellite_orbit_physical_off.x(sat_time)
+        dy = r_over_r0 * np.sin(freq * sat_time) - satellite_orbit_physical_off.y(sat_time)
+        dz = phase_space_orbits_physical_off.x(orb_time) - satellite_orbit_physical_off.z(sat_time)
         dR = np.sqrt(dx ** 2. + dy ** 2.)
 
         force = evaluatezforces(satellite_potential_physical_off, R=dR, z=dz)
@@ -130,21 +132,19 @@ class Disc(object):
 
     def orbits_in_phase_space(self, time_units_internal):
 
-        # only need to compute this once
-        if not hasattr(self, '_orbits'):
+        vxvv = np.array(np.meshgrid(self._z_units_internal, self._v_units_internal)).T
 
-            vxvv = np.array(np.meshgrid(self._z_units_internal, self._v_units_internal)).T
+        # the units of ro and vo we need for the orbits in phase space are that of the local potential, not
+        # the ones used to compute the satellite orbit
+        orbits = Orbit(vxvv, ro=self._units['ro'], vo=self._units['vo'])
 
-            # the units of ro and vo we need for the orbits in phase space are that of the local potential, not
-            # the ones used to compute the satellite orbit
-            orbits = Orbit(vxvv, ro=self._units['ro'], vo=self._units['vo'])
+        orbits.turn_physical_off()
 
-            orbits.turn_physical_off()
+        pot = self.potential_extension.vertical_disk_potential_physical_off
+        orbits.integrate(time_units_internal, pot)
 
-            pot = self.potential_extension.vertical_disk_potential_physical_off
-            orbits.integrate(time_units_internal, pot)
-            self._orbits = orbits
-
+        self._orbits = orbits
+            
         return self._orbits
 
 
