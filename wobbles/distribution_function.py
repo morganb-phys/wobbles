@@ -41,7 +41,7 @@ class DistributionFunction(object):
     @property
     def A(self):
 
-        interp = interp1d(self.z + self.z_fit, self.density, fill_value='extrapolate')
+        interp = interp1d(self.z + self.z_fit, self.density, fill_value='extrapolate', kind='cubic')
 
         zmin_max = np.max(self.z)
 
