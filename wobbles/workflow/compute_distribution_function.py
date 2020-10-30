@@ -1,4 +1,4 @@
-from wobbles.wobbles import Disc
+from wobbles.disc import Disc
 
 def compute_df_time_dependent(potential_extension_local, orbit_integration_time_list,
                satellite_orbit_list, satellite_potential_list, rho_midplane=None):
@@ -19,8 +19,7 @@ def compute_df_time_dependent(potential_extension_local, orbit_integration_time_
 
     for orbit_integration_time in orbit_integration_time_list:
 
-        df,  dj, f = compute_df(disc_instance, orbit_integration_time,
-                         satellite_orbit_list, satellite_potential_list, rho_midplane)
+        df,  dj, f = compute_df(disc_instance, orbit_integration_time, satellite_orbit_list, satellite_potential_list, rho_midplane)
         df_list.append(df)
         dj_list.append(dj)
         force_list.append(f)
