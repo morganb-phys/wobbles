@@ -16,7 +16,7 @@ class Disc(object):
         self._v_units_internal = potential_extension_local.v_units_internal
         self._units = potential_extension_local.units
 
-    def distribution_function(self, delta_action, rho_midplane=None):
+    def distribution_function(self, delta_action, rho_midplane=None, verbose=False):
 
         """
         This routine computes a distribution function for the vertical density and velocity around the sun given a
@@ -26,17 +26,28 @@ class Disc(object):
         :param rho_midplane: the midplane density of the disk. If not specified, it will be computed from the local_potential.
         For Isothermal potentials, you need to manually specify this as galpy will not compute it for you
 
-        :return: An instancce of DistributionFucntion (see wobbles.distribution_function)
+        :return: An instance of DistributionFucntion (see wobbles.distribution_function)
         """
-
-        if rho_midplane is None:
-            rho_midplane = self.potential_extension.rho_midplane
-        velocity_dispersion_local = self.potential_extension.velocity_dispersion_local
-        vertical_freq = self.potential_extension.vertical_freq
 
         density_scale = util.bovy_conversion.dens_in_msolpc3(self._units['vo'], self._units['ro'])
         velocity_scale = self._units['vo']
         length_scale = self._units['ro']
+
+        if rho_midplane is None:
+            rho_midplane = self.potential_extension.rho_midplane
+            if verbose:
+                print('computed a midplane density of '+str(rho_midplane * density_scale) +' [Msun/pc^3]')
+        else:
+            assert rho_midplane is not None
+            if verbose:
+                print('using a specified midplane density of '+ str(rho_midplane * density_scale) +' [Msun/pc^3]')
+
+        velocity_dispersion_local = self.potential_extension.velocity_dispersion_local
+        vertical_freq = self.potential_extension.vertical_freq
+
+        if verbose:
+            print('local velocity dispersion (km/sec): ', velocity_dispersion_local * velocity_scale)
+            print('vertical frequency: ', vertical_freq)
 
         dF = DistributionFunction(rho_midplane, velocity_dispersion_local,
                                   self.potential_extension.action + delta_action,
@@ -45,7 +56,7 @@ class Disc(object):
 
         return dF
 
-    def satellite_forces(self, time_units_internal, satellite_orbit_list, satellite_potentials_list):
+    def satellite_forces(self, time_units_internal, satellite_orbit_list, satellite_potentials_list, verbose=False):
 
         """
         Computes the force exterted by a passing satellite (or satellites) in the z direction
@@ -61,8 +72,9 @@ class Disc(object):
         assert len(satellite_orbit_list) == len(satellite_potentials_list)
         phase_space_orbits = self.orbits_in_phase_space(time_units_internal)
         force = 0
+
         for (orbit, potential) in zip(satellite_orbit_list, satellite_potentials_list):
-            new_force = self._satellite_force(time_units_internal, orbit, phase_space_orbits, potential)
+            new_force = self._satellite_force(time_units_internal, orbit, phase_space_orbits, potential, verbose)
             force += new_force
 
         return force
@@ -85,22 +97,27 @@ class Disc(object):
         assert len(satellite_orbit_list) == len(satellite_potentials_list)
 
         phase_space_orbits = self.orbits_in_phase_space(time_internal_units)
+
         v_z = phase_space_orbits.vx(time_internal_units)
 
         time_step = time_internal_units[1] - time_internal_units[0]
 
-        delta_J = simps(v_z * force) * time_step / self.potential_extension.angle
+        delta_J = simps(v_z * force, dx=time_step) / self.potential_extension.angle
 
         return delta_J
 
     def _satellite_force(self, time, satellite_orbit_physical_off, phase_space_orbits_physical_off,
-                        satellite_potential_physical_off):
+                        satellite_potential_physical_off, verbose):
 
         r_over_r0 = self.potential_extension.R_over_R0_eval
 
         vc_over_v0 = self.potential_extension.Vc
 
         freq = vc_over_v0 / r_over_r0
+
+        if verbose:
+            print('evaluating at r_ovver_r0 = '+str(r_over_r0))
+            print('evaluating at vc_over_v0 = ' + str(vc_over_v0))
 
         dx = r_over_r0 * np.cos(freq * time) - satellite_orbit_physical_off.x(time)
         dy = r_over_r0 * np.sin(freq * time) - satellite_orbit_physical_off.y(time)
