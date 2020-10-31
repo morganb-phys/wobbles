@@ -19,8 +19,10 @@ def compute_df_time_dependent(potential_extension_local, satellite_integration_t
     disc_instance = Disc(potential_extension_local)
 
     for satellite_integration_time in satellite_integration_time_list:
-                
-        orbit_integration_time= np.linspace(0.,satellite_integration_time[-1]-satellite_integration_time[0],len(satellite_integration_time))
+
+        t_end = satellite_integration_time[-1]-satellite_integration_time[0]
+        orbit_integration_time= np.linspace(0., t_end, len(satellite_integration_time))
+        
         df,  dj, f = compute_df(disc_instance, satellite_integration_time, satellite_orbit_list, 
                                 satellite_potential_list, orbit_integration_time,rho_midplane,verbose)
         df_list.append(df)
@@ -54,12 +56,14 @@ def compute_df(disc, satellite_integration_time_units_internal,
     if verbose:
         print('computing the force from ' + str(len(satellite_orbit_list)) + ' satellite orbits...')
 
+    # Fix this so that the argument that is required for this function does not default to None
     disc_phase_space_orbits = disc.orbits_in_phase_space(orbit_integration_time_units_internal)
         
     force = disc.satellite_forces(satellite_integration_time_units_internal, satellite_orbit_list, satellite_potential_list, 
                                   disc_phase_space_orbits, orbit_integration_time_units_internal,verbose)
 
     satellite_integration_time_units_internal= satellite_integration_time_units_internal if orbit_integration_time_units_internal is None else orbit_integration_time_units_internal
+
     delta_J = disc.action_impulse(force, satellite_integration_time_units_internal, satellite_orbit_list, satellite_potential_list,
                                  disc_phase_space_orbits)
 
