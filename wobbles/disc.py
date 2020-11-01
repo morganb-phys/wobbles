@@ -56,14 +56,14 @@ class Disc(object):
 
         return dF
 
-    def satellite_forces(self, sat_time_units_internal, satellite_orbit_list, satellite_potentials_list,
-                         phase_space_orbits, orb_time_units_internal=None,verbose=False):
+    def satellite_forces(self, t_eval_satellite, t_eval_orbits, satellite_orbit_list, satellite_potentials_list,
+                         phase_space_orbits, verbose=False):
 
         """
         Computes the force exterted by a passing satellite (or satellites) in the z direction
 
-        :param time_units_internal: the time over which to compute the perturbation specified in galpy internal units
-        Should be computed from the time over which the satellite perturbtation is computed, but is not necessarily the same
+        :param t_eval_satellite: the times at which to compute the perturbation from the satellite specified in galpy internal units
+        :param t_eval_orbits: the times at which to evaluate the orbits in phase space
         :param satellite_orbit_list: a list of perturbing satellite orbits (instances of galpy.orbit)
         :param satellite_potentials_list: a list of perturbing satellite potentials; should be the same length as satellite_orbit_list
 
@@ -71,13 +71,11 @@ class Disc(object):
         """
 
         assert len(satellite_orbit_list) == len(satellite_potentials_list)
-        
-        orb_time_units_internal= sat_time_units_internal if orb_time_units_internal is None else orb_time_units_internal
-        
+
         force = 0
 
         for (orbit, potential) in zip(satellite_orbit_list, satellite_potentials_list):
-            new_force = self._satellite_force(sat_time_units_internal, orbit, orb_time_units_internal, 
+            new_force = self._satellite_force(t_eval_satellite, t_eval_orbits, orbit,
                                               phase_space_orbits, potential, verbose)
             force += new_force
 
@@ -108,7 +106,7 @@ class Disc(object):
 
         return delta_J
 
-    def _satellite_force(self, sat_time, satellite_orbit_physical_off, orb_time, phase_space_orbits_physical_off,
+    def _satellite_force(self, sat_time, orb_time, satellite_orbit_physical_off, phase_space_orbits_physical_off,
                         satellite_potential_physical_off, verbose):
 
         r_over_r0 = self.potential_extension.R_over_R0_eval
@@ -144,7 +142,7 @@ class Disc(object):
         orbits.integrate(time_units_internal, pot)
 
         self._orbits = orbits
-            
+
         return self._orbits
 
 
