@@ -6,6 +6,7 @@ Development Lead
 ----------------
 
 * Morgan Jane Bennett <bennett@astro.utoronto.ca>
+* Daniel Gilman
 
 Contributors
 ------------
