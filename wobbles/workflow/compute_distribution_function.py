@@ -22,7 +22,7 @@ def compute_df_time_dependent(potential_extension_local, satellite_integration_t
 
         t_end_sat = satellite_integration_time[-1]-satellite_integration_time[0]
         t_eval_orbits = np.linspace(0., t_end_sat, len(satellite_integration_time))
-        
+
         df,  dj, f = compute_df(disc_instance, satellite_integration_time, satellite_orbit_list, 
                                 satellite_potential_list, rho_midplane, t_eval_orbits, verbose)
         df_list.append(df)
@@ -62,7 +62,7 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
     disc_phase_space_orbits = disc.orbits_in_phase_space(t_eval_orbits)
         
     force = disc.satellite_forces(t_eval_satellite, t_eval_orbits, satellite_orbit_list, satellite_potential_list,
-                                  disc_phase_space_orbits ,verbose)
+                                  disc_phase_space_orbits, verbose)
 
     delta_J = disc.action_impulse(force, t_eval_orbits, satellite_orbit_list, satellite_potential_list,
                                  disc_phase_space_orbits)
