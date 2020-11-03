@@ -44,9 +44,10 @@ class DistributionFunction(object):
         interp = interp1d(self.z + self.z_fit, self.density, fill_value='extrapolate', kind='cubic')
 
         zmin_max = np.max(self.z)
-
-        zplus = np.linspace(0, zmin_max, 100)
-        zminus = np.linspace(0, -zmin_max, 100)
+        z_len= len(self.z)
+        
+        zplus = np.linspace(0, zmin_max, z_len)
+        zminus = np.linspace(0, -zmin_max, z_len)
         rho_plus = interp(zplus)
         rho_minus = interp(zminus)
         A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
