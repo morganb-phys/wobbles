@@ -1,12 +1,13 @@
 import galpy
 from galpy.actionAngle.actionAngleVertical import actionAngleVertical
 from galpy.potential import evaluatezforces, turn_physical_off, evaluatelinearPotentials
-from galpy.util.bovy_conversion import get_physical
+from galpy.util.bovy_conversion import get_physical, time_in_Gyr
 import numpy as np
 
 class PotentialExtension(object):
 
-    def __init__(self, galactic_potential, z_min_max_kpc, vz_min_max_kmsec, phase_space_N, R_over_R0_eval=1.):
+    def __init__(self, galactic_potential, z_min_max_kpc, vz_min_max_kmsec, phase_space_N, R_over_R0_eval=1.,
+                 velocity_dispersion_local=20.5):
 
         """
         This class handles some computations that are relevant to the problem of perturbations to the phase space
@@ -19,8 +20,8 @@ class PotentialExtension(object):
         :param phase_space_N: the number of phase space coordinates, will compute phase_space_N^2 action angle variables in total
         :param R_over_R0_eval: The radius were the phase space is computed. Defaults to 1, i.e. the sun's
         position in the galaxy in internal units
+        :param velocity_dispersion_local: the local velocity dispersion in km/sec
 
-        TODO: IN WHAT CIRCUMSTANCES WILL R_OVER_R0_EVAL NOT EQUAL 1?
         """
         self.galactic_potential = galactic_potential
 
@@ -28,6 +29,7 @@ class PotentialExtension(object):
         self.length_scale = z_min_max_kpc
 
         self.R_over_R0_eval = R_over_R0_eval
+        self._velocity_dispersion_local = velocity_dispersion_local
         self.vertical_disk_potential = [galpy.potential.toVerticalPotential(galactic_potential, self.R_over_R0_eval)]
 
         self.z_units_internal, self.v_units_internal, galactic_potential_physical_off, self.units = self._coordinate_system(z_min_max_kpc,
@@ -70,6 +72,16 @@ class PotentialExtension(object):
                 assert np.isfinite(angle[i, j])
 
         return action, angle
+
+    def time_to_internal_time(self, time):
+
+        """
+
+        :param time: time in Gyr
+        :return: time expressed in internal time units
+        """
+
+        return time / time_in_Gyr(self.units['vo'], self.units['ro'])
 
     @property
     def Vc(self):
@@ -120,12 +132,10 @@ class PotentialExtension(object):
 
         """
 
-        TODO: GENERALIZE THIS TO ANY USER-SPECIFIED VELOCITY DISPERSION
         :return: The local velocity dispersion
         """
-        velocity_dispersion_local = 20.5
 
-        return velocity_dispersion_local / self.units['vo']
+        return self._velocity_dispersion_local / self.units['vo']
 
     @staticmethod
     def _coordinate_system(zmin_max, vmin_max, N, galactic_potential):
