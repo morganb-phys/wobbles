@@ -2,8 +2,6 @@ import numpy as np
 import galpy
 import astropy.units as apu
 
-import clustertools as ctl
-
 def normalization(f, log_slope, m_host, mlow, mhigh):
     denom = mhigh ** (2 + log_slope) - mlow ** (2 + log_slope)
     norm = (2 + log_slope) * m_host * f / denom
@@ -55,15 +53,15 @@ def sample_velocities(r, vcirc_mean=220, vcirc_sigma=30):
     km_sec = apu.km / apu.s
 
     return vr * km_sec, vt * km_sec, vz * km_sec
-
-def sample_initial_conditions_ctl(N, potential, r_vir=250):
-
-    subhalo = ctl.setup_cluster('galpy', units='kpckms', origin='galaxy', pot=potential,
-                                 N=N, rmax=r_vir)
-
-    o = ctl.initialize_orbits(subhalo)
-
-    return o
+#
+# def sample_initial_conditions_ctl(N, potential, r_vir=250):
+#
+#     subhalo = ctl.setup_cluster('galpy', units='kpckms', origin='galaxy', pot=potential,
+#                                  N=N, rmax=r_vir)
+#
+#     o = ctl.initialize_orbits(subhalo)
+#
+#     return o
 
 def sample_initial_conditions(potential, rmax3d):
 
@@ -110,12 +108,12 @@ def filter_orbits_NFW(orbits_init, time_in_Gyr, filter_function, function_args):
             inds.append(i)
 
     return np.array(inds)
-
-def generate_sample_orbits_ctl(N, potential, time_in_Gyr):
-
-    orbits = sample_initial_conditions_ctl(N, potential)
-    orbits.integrate(time_in_Gyr, potential)
-    return orbits
+#
+# def generate_sample_orbits_ctl(N, potential, time_in_Gyr):
+#
+#     orbits = sample_initial_conditions_ctl(N, potential)
+#     orbits.integrate(time_in_Gyr, potential)
+#     return orbits
 
 def generate_sample_orbits(N, potential, time_in_Gyr, rmax3d=250):
 
