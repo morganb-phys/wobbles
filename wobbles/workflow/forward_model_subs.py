@@ -77,7 +77,7 @@ def run(run_index):
     sample_orbits_1 = [sample_orbits_0[idx] for idx in inds_keep]
     # get orbits that passed within dr_max of the sun in the last t_orbit years
     dr_max = 8  # kpc
-    nearby_orbits_1_inds = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, potential_global, R_solar=8,
+    nearby_orbits_1_inds, _ = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, potential_global, R_solar=8,
                                                      dr_max=dr_max, pass_through_disk_limit=3, tdep=True)
     nearby_orbits_1 = [sample_orbits_0[idx] for idx in nearby_orbits_1_inds]
     n_nearby_1 = len(nearby_orbits_1)
