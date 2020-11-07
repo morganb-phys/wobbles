@@ -14,21 +14,27 @@ import pickle
 from scipy.stats.kde import gaussian_kde
 import sys
 
-galactic_potential = MWPotential2014
+f = open('./saved_potentials/MW14pot_100', "rb")
+potential_global = pickle.load(f)
+f.close()
+
+galactic_potential = potential_global.galactic_potential
 
 vla_subhalo_phase_space = np.loadtxt('vl2_halos_scaled.dat')
 kde = gaussian_kde(vla_subhalo_phase_space, bw_method=0.1)
 
 t_orbit = -1.64  # Gyr
-N_tsteps = 1600
+N_tsteps = 1200
 time_Gyr = np.linspace(0., t_orbit, N_tsteps) * apu.Gyr
 
 def sample_params():
-    nfw_norm = np.random.uniform(0.3, 0.4)
-    sag_mass_scale = np.random.uniform(0.3, 3)
-    f_sub = np.random.uniform(0.0, 0.1)
 
-    return (nfw_norm, sag_mass_scale, f_sub)
+    nfw_norm = np.random.uniform(0.3, 0.4)
+    sag_mass_scale = np.random.uniform(0.2, 1.5)
+    f_sub = np.random.uniform(0.0, 0.12)
+    vdis = np.random.uniform(15, 35)
+
+    return (nfw_norm, sag_mass_scale, f_sub, vdis)
 
 def select_1d(params, sample):
 
@@ -46,7 +52,7 @@ def run(run_index):
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
     params_sampled = sample_params()
-    [nfw_norm, sag_mscale, f_sub] = params_sampled
+    [nfw_norm, sag_mscale, f_sub, velocity_dispersion] = params_sampled
     norms = np.loadtxt('./saved_potentials/nfw_norms.txt')
     print('samples: ', params_sampled)
 
@@ -71,7 +77,8 @@ def run(run_index):
     sample_orbits_1 = [sample_orbits_0[idx] for idx in inds_keep]
     # get orbits that passed within dr_max of the sun in the last t_orbit years
     dr_max = 8  # kpc
-    nearby_orbits_1_inds = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, dr_max, pass_through_disk_limit=5)
+    nearby_orbits_1_inds = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, potential_global, R_solar=8,
+                                                     dr_max=dr_max, pass_through_disk_limit=3, tdep=True)
     nearby_orbits_1 = [sample_orbits_0[idx] for idx in nearby_orbits_1_inds]
     n_nearby_1 = len(nearby_orbits_1)
     print('kept ' + str(n_nearby_1) + ' halos... ')
@@ -95,20 +102,27 @@ def run(run_index):
         orb.turn_physical_off()
         halo_orbit_list_physical_off_1.append(orb)
 
-    sag_potential_1 = galpy.potential.HernquistPotential(amp=sag_mscale * 1e10 * apu.M_sun, a=3. * apu.kpc)
-    sag_potential_2 = galpy.potential.HernquistPotential(amp=sag_mscale * 0.2e9 * apu.M_sun, a=0.65 * apu.kpc)
+    a_ref_dm = 2.1
+    a_ref_stellar = 0.45
+    m_sag_dm = 5e9 * sag_mscale
+    m_sag_stellar = m_sag_dm/20
+    rs_scale = sag_mscale ** 1./3
+    a_sag, a_stellar = a_ref_dm * rs_scale, a_ref_stellar * rs_scale
+
+    sag_potential_1 = galpy.potential.HernquistPotential(amp=m_sag_dm * apu.M_sun, a=a_sag * apu.kpc)
+    sag_potential_2 = galpy.potential.HernquistPotential(amp=m_sag_stellar * apu.M_sun, a=a_stellar * apu.kpc)
     sag_potential = [sag_potential_1 + sag_potential_2]
     galpy.potential.turn_physical_off(sag_potential)
 
-    disc = Disc(potential_local)
+    disc = Disc(potential_local, potential_global)
     time_internal_units = sag_orbit_phsical_off.time()
 
     perturber_orbits = sag_orbit + halo_orbit_list_physical_off_1
     perturber_potentials = sag_potential + halo_potentials_1
     dF, delta_J, force = compute_df(disc, time_internal_units,
-                                    perturber_orbits, perturber_potentials, verbose=False)
+                                    perturber_orbits, perturber_potentials, velocity_dispersion, verbose=False)
 
-    path_base = './output/forward_model_samples/'
+    path_base = './output/forward_model_samples_2/'
 
     run_index = int(run_index)
     asymmetry, mean_vz = dF.A, dF.mean_v_relative
@@ -134,7 +148,7 @@ def run(run_index):
         string_to_write += '\n'
         f.write(string_to_write)
 
-Nreal = 100
+Nreal = 200
 for iter in range(Nreal):
     print(str(Nreal - iter) + ' remaining...')
     run(int(sys.argv[1]))

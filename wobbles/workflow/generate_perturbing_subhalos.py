@@ -10,7 +10,6 @@ def normalization(f, log_slope, m_host, mlow, mhigh):
     N_halos = norm * (mhigh ** (1 + log_slope) - mlow ** (1 + log_slope)) / (1 + log_slope)
     return np.random.poisson(N_halos)
 
-
 def sample_mass_function(n, a, ml, mh):
     # samples from a mass function dN/dm propto m^log_slope
     invert_CDF = lambda x: (x * (mh ** (1 + a) - ml ** (1 + a)) + ml ** (
@@ -161,39 +160,55 @@ def generate_sample_orbits_kde(N, kde, potential, time_in_Gyr):
 
     return orbits
 
-def orbit_kinetic_energy(orbit, t):
+def passed_near_solar_neighorhood(orbit_list, t, potential_extension_global, R_solar=8, dr_max=10, pass_through_disk_limit=2,
+                                  tdep=True):
 
-    vr, vt, vz = orbit.vR(t), orbit.vT(t), orbit.vz(t)
-    return 1./2 * (vr ** 2 + vt ** 2 + vz ** 2)
+    r_over_r0 = potential_extension_global.R_over_R0_eval
 
-def passed_near_solar_neighorhood(orbit_list, t, dr_max=10, pass_through_disk_limit=2):
+    vc_over_v0 = potential_extension_global.Vc
 
-    x_solar = 8.
-    y_solar = 0.
-    z_solar = 0.
+    freq = vc_over_v0 / r_over_r0
 
-    orbit_scale = 1.
+    t_internal_units = potential_extension_global.time_to_internal_time(t.value)
+
+    if tdep:
+        x_solar = R_solar * np.cos(freq * t_internal_units)
+        y_solar = R_solar * np.sin(freq * t_internal_units)
+        z_solar = 0.
+
+    else:
+        x_solar = 8.
+        y_solar = 0.
+        z_solar = 0.
 
     inds = []
-    L = len(t)
-    n_start = int(L*0.)
-    n_end = int(L*1.)
+
+    approach_distance = []
+
+    orbits = []
 
     for idx, orb in enumerate(orbit_list):
+
         x_orb, y_orb, z_orb = np.squeeze(orb.x(t)), np.squeeze(orb.y(t)), np.squeeze(orb.z(t))
-        x_orb *= orbit_scale
-        y_orb *= orbit_scale
-        z_orb *= orbit_scale
+
         dx, dy, dz = x_orb - x_solar, y_orb - y_solar, z_orb - z_solar
         dr = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
 
-        if np.any(dr[n_start:n_end] <= dr_max):
+        if np.any(dr <= dr_max):
 
             change_sign_z = np.where(np.sign(z_orb[:-1]) != np.sign(z_orb[1:]))[0] + 1
 
             # if it never passes through the disk
             if len(change_sign_z) < pass_through_disk_limit:
                 inds.append(idx)
+                approach_distance.append(min(dr))
+                idx_min = np.argmin(dr)
+                orbits.append([x_orb[idx_min], y_orb[idx_min], z_orb[idx_min]])
                 continue
-            
-    return np.array(inds)
+
+    sorted_inds = np.argsort(approach_distance)
+    orbits_out = []
+    for idx in sorted_inds:
+        orbits_out.append(orbits[idx])
+
+    return np.array(inds)[sorted_inds], orbits_out

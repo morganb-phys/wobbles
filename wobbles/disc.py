@@ -9,14 +9,26 @@ from galpy.util.bovy_conversion import get_physical
 
 class Disc(object):
 
-    def __init__(self, potential_extension_local):
+    def __init__(self, potential_extension_local, potential_extension_global=None):
 
-        self.potential_extension = potential_extension_local
+        """
+
+        :param potential_extension_local: An instance of PotentialExtension used to compute properties of the local matter density
+        :param potential_extension_global: An instance of PotentialExtension used to compute large scale properties of galaxy,
+        for example the orbit of a perturber and the the suns position relative to the center of the galaxy
+        """
+
+        self.potential_extension_local = potential_extension_local
+        if potential_extension_global is None:
+            potential_extension_global = potential_extension_local
+        self.potential_extension_global = potential_extension_global
+
         self._z_units_internal = potential_extension_local.z_units_internal
         self._v_units_internal = potential_extension_local.v_units_internal
         self._units = potential_extension_local.units
 
-    def distribution_function(self, delta_action, rho_midplane=None, verbose=False):
+    def distribution_function(self, delta_action, velocity_dispersion_local, rho_midplane=None,
+                              verbose=False):
 
         """
         This routine computes a distribution function for the vertical density and velocity around the sun given a
@@ -34,7 +46,7 @@ class Disc(object):
         length_scale = self._units['ro']
 
         if rho_midplane is None:
-            rho_midplane = self.potential_extension.rho_midplane
+            rho_midplane = self.potential_extension_local.rho_midplane
             if verbose:
                 print('computed a midplane density of '+str(rho_midplane * density_scale) +' [Msun/pc^3]')
         else:
@@ -42,15 +54,15 @@ class Disc(object):
             if verbose:
                 print('using a specified midplane density of '+ str(rho_midplane * density_scale) +' [Msun/pc^3]')
 
-        velocity_dispersion_local = self.potential_extension.velocity_dispersion_local
-        vertical_freq = self.potential_extension.vertical_freq
+        velocity_dispersion_local = velocity_dispersion_local / self.potential_extension_local.units['vo']
+        vertical_freq = self.potential_extension_local.vertical_freq
 
         if verbose:
             print('local velocity dispersion (km/sec): ', velocity_dispersion_local * velocity_scale)
             print('vertical frequency: ', vertical_freq)
 
         dF = DistributionFunction(rho_midplane, velocity_dispersion_local,
-                                  self.potential_extension.action + delta_action,
+                                  self.potential_extension_local.action + delta_action,
                                   vertical_freq, self._v_units_internal,
                                   self._z_units_internal, length_scale, velocity_scale, density_scale)
 
@@ -102,16 +114,16 @@ class Disc(object):
 
         time_step = time_internal_units[1] - time_internal_units[0]
 
-        delta_J = simps(v_z * force, dx=time_step) / self.potential_extension.angle
+        delta_J = simps(v_z * force, dx=time_step) / self.potential_extension_local.angle
 
         return delta_J
 
     def _satellite_force(self, sat_time, orb_time, satellite_orbit_physical_off, phase_space_orbits_physical_off,
                         satellite_potential_physical_off, verbose):
 
-        r_over_r0 = self.potential_extension.R_over_R0_eval
+        r_over_r0 = self.potential_extension_global.R_over_R0_eval
 
-        vc_over_v0 = self.potential_extension.Vc
+        vc_over_v0 = self.potential_extension_global.Vc
 
         freq = vc_over_v0 / r_over_r0
 
@@ -138,7 +150,7 @@ class Disc(object):
 
         orbits.turn_physical_off()
 
-        pot = self.potential_extension.vertical_disk_potential_physical_off
+        pot = self.potential_extension_local.vertical_disk_potential_physical_off
         orbits.integrate(time_units_internal, pot)
 
         self._orbits = orbits
