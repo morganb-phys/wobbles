@@ -29,38 +29,30 @@ time_Gyr = np.linspace(0., t_orbit, N_tsteps) * apu.Gyr
 
 def sample_params():
 
-    nfw_norm = np.random.uniform(0.3, 0.4)
-    sag_mass_scale = np.random.uniform(0.2, 1.5)
-    f_sub = np.random.uniform(0.0, 0.12)
+    nfw_norm = np.random.uniform(0.15, 0.45)
+    disk_norm = np.random.uniform(0.45, 0.75)
+    sag_mass_scale = np.random.uniform(0.3, 3.)
+    f_sub = np.random.uniform(0.0, 0.1)
     vdis = np.random.uniform(15, 35)
 
-    return (nfw_norm, sag_mass_scale, f_sub, vdis)
+    return (nfw_norm, disk_norm, sag_mass_scale, f_sub, vdis)
 
-def select_1d(params, sample):
+def sample_sag_orbit():
 
-    idx_min = np.argmin(abs(params - sample))
-    return idx_min
+    orbit_init_sag = [283. * apu.deg, -30. * apu.deg, 26. * apu.kpc,
+                      -2.6 * apu.mas / apu.yr, -1.3 * apu.mas / apu.yr,
+                      140. * apu.km / apu.s]  # Initial conditions of the satellite
+    return orbit_init_sag
 
-def select_2d(params1, params2, sample1, sample2, scale1, scale2):
-
-    dx1, dx2 = (params1 - sample1)/scale1, (params2 - sample2)/scale2
-    dx = np.sqrt(dx1 ** 2 + dx2 ** 2)
-    idx_min = np.argmin(dx)
-    return idx_min
-
-def run(run_index):
+def run(run_index, output_folder_name):
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
     params_sampled = sample_params()
-    [nfw_norm, sag_mscale, f_sub, velocity_dispersion] = params_sampled
-    norms = np.loadtxt('./saved_potentials/nfw_norms.txt')
-    print('samples: ', params_sampled)
-
-    idx_min = select_1d(norms, nfw_norm)
-
-    f = open('./saved_potentials/MW_nfw_scale'+str(idx_min+1), "rb")
-    potential_local = pickle.load(f)
+    [nfw_norm, disk_norm, sag_mscale, f_sub, velocity_dispersion] = params_sampled
+    f = open('./saved_potentials/tabulated_MWpot', "rb")
+    tabulated_potential = pickle.load(f)
     f.close()
+    potential_local = tabulated_potential.evaluate(nfw_norm, disk_norm)
 
     m_host = 1.3 * 10 ** 12
     mlow, mhigh = 5 * 10 ** 6, 5 * 10 ** 9
@@ -91,9 +83,7 @@ def run(run_index):
     for m, c in zip(halo_masses_1, halo_concentrations_1):
         halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
 
-    orbit_init_sag = [283. * apu.deg, -30. * apu.deg, 26. * apu.kpc,
-                      -2.6 * apu.mas / apu.yr, -1.3 * apu.mas / apu.yr,
-                      140. * apu.km / apu.s]  # Initial conditions of the satellite
+    orbit_init_sag = sample_sag_orbit()
     sag_orbit_phsical_off = integrate_orbit(orbit_init_sag, galactic_potential, time_Gyr)
     sag_orbit = [sag_orbit_phsical_off]
 
@@ -122,7 +112,7 @@ def run(run_index):
     dF, delta_J, force = compute_df(disc, time_internal_units,
                                     perturber_orbits, perturber_potentials, velocity_dispersion, verbose=False)
 
-    path_base = './output/forward_model_samples_2/'
+    path_base = './output/forward_model_samples/'
 
     run_index = int(run_index)
     asymmetry, mean_vz = dF.A, dF.mean_v_relative
@@ -147,8 +137,8 @@ def run(run_index):
             string_to_write += str(np.round(param_val, 5)) + ' '
         string_to_write += '\n'
         f.write(string_to_write)
-
+#
 Nreal = 200
 for iter in range(Nreal):
     print(str(Nreal - iter) + ' remaining...')
-    run(int(sys.argv[1]))
+    run(1.)
