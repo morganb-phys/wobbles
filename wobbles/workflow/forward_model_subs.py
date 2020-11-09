@@ -7,7 +7,7 @@ from wobbles.disc import Disc
 import numpy as np
 
 import galpy
-from galpy.potential import NFWPotential
+from galpy.potential import NFWPotential, HernquistPotential
 from wobbles.potential_extension import PotentialExtension
 
 import pickle
@@ -111,10 +111,12 @@ def run(run_index, output_folder_name):
 
     halo_masses_1 = sample_mass_function(n_nearby_1, log_slope, mlow, mhigh)
     halo_concentrations_1 = sample_concentration(halo_masses_1)
+    #halo_concentrations_1 = sample_hernquist_a(np.array(halo_masses_1))
 
     halo_potentials_1 = []
     for m, c in zip(halo_masses_1, halo_concentrations_1):
         halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
+        #halo_potentials_1.append(HernquistPotential(amp=2 * m * apu.solMass, a=c * apu.kpc))
 
     orbit_init_sag = sample_sag_orbit()
     sag_orbit_phsical_off = integrate_orbit(orbit_init_sag, galactic_potential, time_Gyr)

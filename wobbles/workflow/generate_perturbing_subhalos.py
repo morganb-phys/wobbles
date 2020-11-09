@@ -23,6 +23,10 @@ def sample_concentration(m):
     # close to the CDM mass concentration relation
     return 17 * (m / 10 ** 8) ** -0.06
 
+def sample_hernquist_a(m):
+
+    return 1.05 * (m/10**8) ** 0.5
+
 def sample_positions(rmax3d):
 
     R = np.random.uniform(0, rmax3d)
