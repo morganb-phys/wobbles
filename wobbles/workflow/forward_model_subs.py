@@ -76,14 +76,12 @@ def sample_sag_orbit():
 
     return orbit_init_sag
 
-def run(run_index, output_folder_name, VLA_data_path):
+def run(run_index, output_folder_name, VLA_data_path, tabulated_potential):
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
     params_sampled = sample_params()
     [nfw_norm, disk_norm, sag_mscale, f_sub, velocity_dispersion] = params_sampled
-    f = open('./saved_potentials/tabulated_MWpot', "rb")
-    tabulated_potential = pickle.load(f)
-    f.close()
+    
     potential_local = tabulated_potential.evaluate(nfw_norm, disk_norm)
 
     galactic_potential = sample_galactic_potential()
