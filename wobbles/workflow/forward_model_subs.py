@@ -3,7 +3,7 @@ from wobbles.workflow.integrate_single_orbit import integrate_orbit
 from wobbles.workflow.generate_perturbing_subhalos import *
 from galpy.potential.mwpotentials import PowerSphericalPotentialwCutoff, MiyamotoNagaiPotential
 from wobbles.disc import Disc
-
+import os
 import numpy as np
 
 import galpy
@@ -20,12 +20,14 @@ import sys
 #
 # galactic_potential = potential_global.galactic_potential
 
-vla_subhalo_phase_space = np.loadtxt('vl2_halos_scaled.dat')
-kde = gaussian_kde(vla_subhalo_phase_space, bw_method=0.1)
-
 t_orbit = -1.64  # Gyr
 N_tsteps = 1200
 time_Gyr = np.linspace(0., t_orbit, N_tsteps) * apu.Gyr
+
+def VLA_simulation_phasespaceKDE(path_to_file):
+    vla_subhalo_phase_space = np.loadtxt(path_to_file + 'vl2_halos_scaled.dat')
+    kde = gaussian_kde(vla_subhalo_phase_space, bw_method=0.1)
+    return kde
 
 def sample_galactic_potential():
 
@@ -74,7 +76,7 @@ def sample_sag_orbit():
 
     return orbit_init_sag
 
-def run(run_index, output_folder_name):
+def run(run_index, output_folder_name, VLA_data_path):
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
     params_sampled = sample_params()
@@ -86,6 +88,8 @@ def run(run_index, output_folder_name):
 
     galactic_potential = sample_galactic_potential()
     potential_global = PotentialExtension(galactic_potential, 2, 120, 100, compute_action_angle=False)
+
+    kde = VLA_simulation_phasespaceKDE(VLA_data_path)
 
     m_host = 1.3 * 10 ** 12
     mlow, mhigh = 5 * 10 ** 6, 5 * 10 ** 9
@@ -172,7 +176,8 @@ def run(run_index, output_folder_name):
         f.write(string_to_write)
 #
 # Nreal = 200
+# VLA_data_path = os.getenv('HOME') + '/Code/external/wobbles/wobbles/workflow/'
 # output_folder = './output/forward_model_samples/'
 # for iter in range(Nreal):
 #     print(str(Nreal - iter) + ' remaining...')
-#     run(1, output_folder)
+#     run(1, output_folder, VLA_data_path)
