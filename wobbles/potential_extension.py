@@ -7,7 +7,7 @@ import numpy as np
 class PotentialExtension(object):
 
     def __init__(self, galactic_potential, z_min_max_kpc, vz_min_max_kmsec, phase_space_N, R_over_R0_eval=1.,
-                 velocity_dispersion_local=20.5):
+                 velocity_dispersion_local=20.5, compute_action_angle=True):
 
         """
         This class handles some computations that are relevant to the problem of perturbations to the phase space
@@ -38,7 +38,10 @@ class PotentialExtension(object):
         self.galactic_potential_physical_off = galactic_potential_physical_off
         self.vertical_disk_potential_physical_off = [galpy.potential.toVerticalPotential(galactic_potential_physical_off, self.R_over_R0_eval)]
 
-        self.action, self.angle = self.action_angle()
+        if compute_action_angle:
+            self.action, self.angle = self.action_angle()
+        else:
+            self.action, self.angle = None, None
 
     def action_angle(self):
 

@@ -1,24 +1,24 @@
 from wobbles.workflow.compute_distribution_function import compute_df
 from wobbles.workflow.integrate_single_orbit import integrate_orbit
 from wobbles.workflow.generate_perturbing_subhalos import *
-from wobbles.potential_extension import PotentialExtension
+from galpy.potential.mwpotentials import PowerSphericalPotentialwCutoff, MiyamotoNagaiPotential
 from wobbles.disc import Disc
 
 import numpy as np
 
 import galpy
 from galpy.potential import NFWPotential
-from galpy.potential import MWPotential2014
+from wobbles.potential_extension import PotentialExtension
 
 import pickle
 from scipy.stats.kde import gaussian_kde
 import sys
-
-f = open('./saved_potentials/MW14pot_100', "rb")
-potential_global = pickle.load(f)
-f.close()
-
-galactic_potential = potential_global.galactic_potential
+#
+# f = open('./saved_potentials/MW14pot_100', "rb")
+# potential_global = pickle.load(f)
+# f.close()
+#
+# galactic_potential = potential_global.galactic_potential
 
 vla_subhalo_phase_space = np.loadtxt('vl2_halos_scaled.dat')
 kde = gaussian_kde(vla_subhalo_phase_space, bw_method=0.1)
@@ -26,6 +26,18 @@ kde = gaussian_kde(vla_subhalo_phase_space, bw_method=0.1)
 t_orbit = -1.64  # Gyr
 N_tsteps = 1200
 time_Gyr = np.linspace(0., t_orbit, N_tsteps) * apu.Gyr
+
+def sample_galactic_potential():
+
+    sigma_norm = np.random.normal(1, 0.1)
+    sigma_scale = np.random.normal(1, 0.05)
+
+    mwpot = [PowerSphericalPotentialwCutoff(normalize=sigma_norm * 0.05, alpha=1.8,
+                                    rc=sigma_scale * 1.9 / 8.),
+            MiyamotoNagaiPotential(a=sigma_scale * 3. / 8., b= sigma_scale * 0.28 / 8., normalize=sigma_norm * 0.6),
+            NFWPotential(a=sigma_scale * 2., normalize=sigma_norm * 0.35)]
+
+    return mwpot
 
 def sample_params():
 
@@ -39,9 +51,27 @@ def sample_params():
 
 def sample_sag_orbit():
 
-    orbit_init_sag = [283. * apu.deg, -30. * apu.deg, 26. * apu.kpc,
-                      -2.6 * apu.mas / apu.yr, -1.3 * apu.mas / apu.yr,
-                      140. * apu.km / apu.s]  # Initial conditions of the satellite
+    alpha_0, delta_0 = 283, -30
+    d_alpha = np.random.normal(0, 3)
+    d_delta = np.random.normal(0, 3)
+    alpha, delta = alpha_0 + d_alpha, delta_0 + d_delta
+
+    z_0 = 26
+    delta_z = np.random.normal(0, 0.5)
+    z = z_0 + delta_z
+
+    mu_alpha = -2.6 + np.random.normal(0, 0.001)
+    mu_delta = -1.3 + np.random.normal(0, 0.001)
+
+    vr_0 = 140
+    delta_vr = np.random.normal(0, 5)
+    vr = vr_0 + delta_vr
+
+    alpha = np.random.normal()
+    orbit_init_sag = [alpha * apu.deg, delta * apu.deg, z * apu.kpc,
+                      mu_alpha * apu.mas / apu.yr, mu_delta * apu.mas / apu.yr,
+                      vr * apu.km / apu.s]  # Initial conditions of the satellite
+
     return orbit_init_sag
 
 def run(run_index, output_folder_name):
@@ -53,6 +83,9 @@ def run(run_index, output_folder_name):
     tabulated_potential = pickle.load(f)
     f.close()
     potential_local = tabulated_potential.evaluate(nfw_norm, disk_norm)
+
+    galactic_potential = sample_galactic_potential()
+    potential_global = PotentialExtension(galactic_potential, 2, 120, 100, compute_action_angle=False)
 
     m_host = 1.3 * 10 ** 12
     mlow, mhigh = 5 * 10 ** 6, 5 * 10 ** 9
@@ -112,33 +145,32 @@ def run(run_index, output_folder_name):
     dF, delta_J, force = compute_df(disc, time_internal_units,
                                     perturber_orbits, perturber_potentials, velocity_dispersion, verbose=False)
 
-    path_base = './output/forward_model_samples/'
-
     run_index = int(run_index)
     asymmetry, mean_vz = dF.A, dF.mean_v_relative
-
-    with open(path_base + 'asymmetry_' + str(run_index) + '.txt', 'a') as f:
+    print(output_folder_name + 'asymmetry_' + str(run_index) + '.txt')
+    with open(output_folder_name + 'asymmetry_' + str(run_index) + '.txt', 'a') as f:
         string_to_write = ''
         for ai in asymmetry:
             string_to_write += str(np.round(ai, 5)) + ' '
         string_to_write += '\n'
         f.write(string_to_write)
 
-    with open(path_base + 'meanvz_' + str(run_index) + '.txt', 'a') as f:
+    with open(output_folder_name + 'meanvz_' + str(run_index) + '.txt', 'a') as f:
         string_to_write = ''
         for vzi in mean_vz:
             string_to_write += str(np.round(vzi, 5)) + ' '
         string_to_write += '\n'
         f.write(string_to_write)
 
-    with open(path_base + 'params_' + str(run_index) + '.txt', 'a') as f:
+    with open(output_folder_name + 'params_' + str(run_index) + '.txt', 'a') as f:
         string_to_write = ''
         for param_val in params_sampled:
             string_to_write += str(np.round(param_val, 5)) + ' '
         string_to_write += '\n'
         f.write(string_to_write)
 #
-Nreal = 200
-for iter in range(Nreal):
-    print(str(Nreal - iter) + ' remaining...')
-    run(1.)
+# Nreal = 200
+# output_folder = './output/forward_model_samples/'
+# for iter in range(Nreal):
+#     print(str(Nreal - iter) + ' remaining...')
+#     run(1, output_folder)
