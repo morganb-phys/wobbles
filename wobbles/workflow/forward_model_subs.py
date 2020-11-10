@@ -69,7 +69,6 @@ def sample_sag_orbit():
     delta_vr = np.random.normal(0, 0.00000005)
     vr = vr_0 + delta_vr
 
-    alpha = np.random.normal()
     orbit_init_sag = [alpha * apu.deg, delta * apu.deg, z * apu.kpc,
                       mu_alpha * apu.mas / apu.yr, mu_delta * apu.mas / apu.yr,
                       vr * apu.km / apu.s]  # Initial conditions of the satellite
