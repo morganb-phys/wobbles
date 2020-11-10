@@ -39,6 +39,9 @@ class DistributionFunction(object):
 
         self.dF_list = dF_list
 
+        self.z = self.dF_list[0].z
+        self.v = self.dF_list[0].v
+
     def velocity_moment(self, n):
 
         v_moment = 0
