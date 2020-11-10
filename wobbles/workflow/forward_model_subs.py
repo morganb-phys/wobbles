@@ -31,21 +31,21 @@ def VLA_simulation_phasespaceKDE(path_to_file):
 
 def sample_galactic_potential():
 
-    sigma_norm = np.random.normal(1, 0.1)
-    sigma_scale = np.random.normal(1, 0.05)
+    sigma_norm = np.random.uniform(0.7, 1.3)
+    sigma_scale = 1.
 
     mwpot = [PowerSphericalPotentialwCutoff(normalize=sigma_norm * 0.05, alpha=1.8,
                                     rc=sigma_scale * 1.9 / 8.),
             MiyamotoNagaiPotential(a=sigma_scale * 3. / 8., b= sigma_scale * 0.28 / 8., normalize=sigma_norm * 0.6),
             NFWPotential(a=sigma_scale * 2., normalize=sigma_norm * 0.35)]
 
-    return mwpot
+    return mwpot, sigma_norm
 
 def sample_params():
 
     nfw_norm = np.random.uniform(0.15, 0.45)
     disk_norm = np.random.uniform(0.45, 0.75)
-    sag_mass_scale = np.random.uniform(0.3, 3.)
+    sag_mass_scale = np.random.uniform(0.3, 4.)
     f_sub = np.random.uniform(0.0, 0.1)
     vdis = np.random.uniform(15, 35)
 
@@ -54,19 +54,19 @@ def sample_params():
 def sample_sag_orbit():
 
     alpha_0, delta_0 = 283, -30
-    d_alpha = np.random.normal(0, 3)
-    d_delta = np.random.normal(0, 3)
+    d_alpha = np.random.normal(0, 0.001)
+    d_delta = np.random.normal(0, 0.001)
     alpha, delta = alpha_0 + d_alpha, delta_0 + d_delta
 
     z_0 = 26
-    delta_z = np.random.normal(0, 0.5)
+    delta_z = np.random.normal(0, 0.00005)
     z = z_0 + delta_z
 
-    mu_alpha = -2.6 + np.random.normal(0, 0.001)
-    mu_delta = -1.3 + np.random.normal(0, 0.001)
+    mu_alpha = -2.6 + np.random.normal(0, 0.000001)
+    mu_delta = -1.3 + np.random.normal(0, 0.000001)
 
     vr_0 = 140
-    delta_vr = np.random.normal(0, 5)
+    delta_vr = np.random.normal(0, 0.00000005)
     vr = vr_0 + delta_vr
 
     alpha = np.random.normal()
@@ -81,10 +81,11 @@ def run(run_index, output_folder_name, VLA_data_path, tabulated_potential):
 
     params_sampled = sample_params()
     [nfw_norm, disk_norm, sag_mscale, f_sub, velocity_dispersion] = params_sampled
-    
+
     potential_local = tabulated_potential.evaluate(nfw_norm, disk_norm)
 
-    galactic_potential = sample_galactic_potential()
+    galactic_potential, gal_norm = sample_galactic_potential()
+    params_sampled = np.append(params_sampled, gal_norm)
     potential_global = PotentialExtension(galactic_potential, 2, 120, 100, compute_action_angle=False)
 
     kde = VLA_simulation_phasespaceKDE(VLA_data_path)
