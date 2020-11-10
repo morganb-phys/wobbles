@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 
 class DistributionFunction(object):
 
-    def __call__(self, rho_midplane, normalization_list, velocity_dispersion_list, J, nu, v_domain, z_domain, length_scale,
+    def __init__(self, rho_midplane, normalization_list, velocity_dispersion_list, J, nu, v_domain, z_domain, length_scale,
                  velocity_scale, density_scale):
 
         """
