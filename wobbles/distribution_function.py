@@ -31,9 +31,9 @@ class DistributionFunction(object):
         assert len(normalization_list) == len(velocity_dispersion_list)
 
         dF_list = []
-        for norm, sigma in zip(normalization_list, velocity_dispersion_list):
+        for sigma in velocity_dispersion_list:
 
-            f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
+            f = _SingleDistributionFunction(rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
                                             density_scale)
             dF_list.append(f)
 
@@ -41,52 +41,53 @@ class DistributionFunction(object):
 
         self.z = self.dF_list[0].z
         self.v = self.dF_list[0].v
+        self.normalization_list = normalization_list
 
     def velocity_moment(self, n):
 
         v_moment = 0
-        for df in self.dF_list:
-            v_moment += df.velocity_moment(n)
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            v_moment += scale * df.velocity_moment(n)
         return v_moment
 
     @property
     def A(self):
 
         A = 0
-        for df in self.dF_list:
-            A += df.A
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            A += scale * df.A
         return A
 
     @property
     def density(self):
 
         rho = 0
-        for df in self.dF_list:
-            rho += df.density
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            rho += scale * df.density
         return rho
 
     @property
     def mean_v(self):
 
         mean_v = 0
-        for df in self.dF_list:
-            mean_v += df.mean_v
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            mean_v += scale * df.mean_v
         return mean_v
 
     @property
     def velocity_dispersion(self):
 
         vdis = 0
-        for df in self.dF_list:
-            vdis += df.velocity_dispersion
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            vdis += scale * df.velocity_dispersion
         return vdis
 
     @property
     def mean_v_relative(self):
 
         mean_v_rel = 0
-        for df in self.dF_list:
-            mean_v_rel += df.mean_v_relative
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            mean_v_rel += scale * df.mean_v_relative
         return mean_v_rel
 
 
