@@ -53,17 +53,17 @@ def sample_params():
 
 def sample_sag_orbit():
 
-    alpha_0, delta_0 = 283, -30
+    alpha_0, delta_0 = 220, -50
     d_alpha = np.random.normal(0, 0.001)
     d_delta = np.random.normal(0, 0.001)
     alpha, delta = alpha_0 + d_alpha, delta_0 + d_delta
 
-    z_0 = 26
+    z_0 = 22
     delta_z = np.random.normal(0, 0.00005)
     z = z_0 + delta_z
 
-    mu_alpha = -2.6 + np.random.normal(0, 0.000001)
-    mu_delta = -1.3 + np.random.normal(0, 0.000001)
+    mu_alpha = -3.1 + np.random.normal(0, 0.000001)
+    mu_delta = -2.8 + np.random.normal(0, 0.000001)
 
     vr_0 = 140
     delta_vr = np.random.normal(0, 0.00000005)
