@@ -66,10 +66,10 @@ class TabulatedPotential(object):
 #
 #         if counter == int(sys.argv[1]):
 #
-#             galactic_potential = [PowerSphericalPotentialwCutoff(normalize=0.05, alpha=1.8,
-#                                                                  rc=1.9 / 8.),
-#                                   MiyamotoNagaiPotential(a=3. / 8., b=0.28 / 8., normalize=disk_norm),
-#                                   NFWPotential(a=2., normalize=nfw_norm)]
+            # galactic_potential = [PowerSphericalPotentialwCutoff(normalize=0.05, alpha=1.8,
+            #                                                      rc=1.9 / 8.),
+            #                       MiyamotoNagaiPotential(a=3. / 8., b=0.28 / 8., normalize=disk_norm),
+            #                       NFWPotential(a=2., normalize=nfw_norm)]
 #
 #             potential_local = PotentialExtension(galactic_potential, z_min_max_kpc, vz_min_max_kmsec, phase_space_N)
 #
