@@ -45,7 +45,7 @@ def sample_params():
 
     nfw_norm = np.random.uniform(0.15, 0.45)
     disk_norm = np.random.uniform(0.45, 0.75)
-    log_sag_mass_DM = np.random.uniform(9, 10.5)
+    log_sag_mass_DM = np.random.uniform(9, 11)
     f_sub = np.random.uniform(0.0, 0.1)
     vdis = np.random.uniform(15, 35)
 
