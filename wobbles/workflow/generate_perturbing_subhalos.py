@@ -18,7 +18,6 @@ def sample_mass_function(n, a, ml, mh):
 
     return invert_CDF(u)
 
-
 def sample_concentration(m):
     # close to the CDM mass concentration relation
     return 17 * (m / 10 ** 8) ** -0.06
@@ -40,39 +39,6 @@ def sample_positions(rmax3d):
     phi = np.random.uniform(0, 360)
     kpc = apu.kpc
     return R * kpc, z * kpc, phi * apu.deg
-
-def sample_velocities(r, vcirc_mean=220, vcirc_sigma=30):
-
-    u = np.random.rand()
-    if u < 0.5:
-        sign = -1
-    else:
-        sign = 1
-
-    rscale = np.sqrt(8/r.value)
-
-    vt = sign * np.random.normal(vcirc_mean, vcirc_sigma)
-    vr = np.random.normal(0, 50.) * rscale
-    vz = np.random.normal(0, 50.) * rscale
-    km_sec = apu.km / apu.s
-
-    return vr * km_sec, vt * km_sec, vz * km_sec
-#
-# def sample_initial_conditions_ctl(N, potential, r_vir=250):
-#
-#     subhalo = ctl.setup_cluster('galpy', units='kpckms', origin='galaxy', pot=potential,
-#                                  N=N, rmax=r_vir)
-#
-#     o = ctl.initialize_orbits(subhalo)
-#
-#     return o
-
-def sample_initial_conditions(potential, rmax3d):
-
-    r, z, phi = sample_positions(rmax3d)
-    vr, vt, vz = sample_velocities(r)
-
-    return [r, vr, vt, z, vz, phi]
 
 def core_nfw_pdf(r, rs_host, r_core):
 
@@ -112,30 +78,10 @@ def filter_orbits_NFW(orbits_init, time_in_Gyr, filter_function, function_args):
             inds.append(i)
 
     return np.array(inds)
-#
-# def generate_sample_orbits_ctl(N, potential, time_in_Gyr):
-#
-#     orbits = sample_initial_conditions_ctl(N, potential)
-#     orbits.integrate(time_in_Gyr, potential)
-#     return orbits
 
-def generate_sample_orbits(N, potential, time_in_Gyr, rmax3d=250):
+def sample_initial_conditions_kde(kde):
 
-    orbits = []
-
-    for i in range(0, N):
-
-        init = sample_initial_conditions(potential, rmax3d)
-        orbit = galpy.orbit.Orbit(vxvv=init)
-
-        orbit.integrate(time_in_Gyr, potential)
-        orbits.append(orbit)
-
-    return orbits
-
-def sample_initial_conditions_kde(N, kde):
-
-    (r, vr, vt, z, vz, phi) = kde.resample(N)
+    (r, vr, vt, z, vz, phi) = kde.resample(1)
 
     r, vr, vt, z, vz, phi = r[0], vr[0], vt[0], z[0], vz[0], phi[0]
 
@@ -154,7 +100,7 @@ def generate_sample_orbits_kde(N, kde, potential, time_in_Gyr):
 
     for i in range(0, N):
 
-        init = sample_initial_conditions_kde(1, kde)
+        init = sample_initial_conditions_kde(kde)
         orbit = galpy.orbit.Orbit(vxvv=init)
 
         orbit.integrate(time_in_Gyr, potential)
@@ -200,7 +146,6 @@ def passed_near_solar_neighorhood(orbit_list, t, potential_extension_global, R_s
 
             change_sign_z = np.where(np.sign(z_orb[:-1]) != np.sign(z_orb[1:]))[0] + 1
 
-            # if it never passes through the disk
             if len(change_sign_z) < pass_through_disk_limit:
                 inds.append(idx)
                 approach_distance.append(min(dr))
