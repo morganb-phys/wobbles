@@ -85,7 +85,11 @@ class TestComputeDistributionFunction(object):
         npt.assert_almost_equal(A, np.zeros_like(A), decimal=3)
 
         'TODO: THIS TEST FAILS, THE MEAN V CURVE HAS A WEIRD SHAPE BELOW Z = 0'
+
         vz = self.dF_nopert.mean_v_relative[1:-1]
+        # import matplotlib.pyplot as plt
+        # plt.plot(vz); plt.show()
+        # a=input('continue')
         npt.assert_almost_equal(vz, np.zeros_like(vz), decimal=3)
 
     def test_exceptions(self):
@@ -101,6 +105,7 @@ class TestComputeDistributionFunction(object):
 # t.test_multi_component()
 # t.test_exceptions()
 # t.test_no_perturbation()
-#
+
+# comment this out if you uncomment the lines above
 if __name__ == '__main__':
     pytest.main()
