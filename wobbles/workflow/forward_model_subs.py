@@ -132,8 +132,9 @@ def run(run_index, output_folder_name, VLA_data_path, tabulated_potential):
 
     m_sag_dm = 10 ** log_sag_mass_DM
     m_sag_stellar = m_sag_dm/50
-    a_sag = 1.05 * (m_sag_dm/10**8) ** 0.5
-    a_stellar = 1.05 * (m_sag_stellar/10**8) ** 0.5
+
+    a_sag = 3 * (m_sag_dm/10**10) ** 1./3
+    a_stellar = 1.5 * (m_sag_stellar/10**9) ** 1./3
 
     sag_potential_1 = galpy.potential.HernquistPotential(amp=m_sag_dm * apu.M_sun, a=a_sag * apu.kpc)
     sag_potential_2 = galpy.potential.HernquistPotential(amp=m_sag_stellar * apu.M_sun, a=a_stellar * apu.kpc)
