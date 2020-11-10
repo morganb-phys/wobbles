@@ -45,11 +45,11 @@ def sample_params():
 
     nfw_norm = np.random.uniform(0.15, 0.45)
     disk_norm = np.random.uniform(0.45, 0.75)
-    sag_mass_scale = np.random.uniform(0.3, 4.)
+    log_sag_mass_DM = np.random.uniform(9, 10.5)
     f_sub = np.random.uniform(0.0, 0.1)
     vdis = np.random.uniform(15, 35)
 
-    return (nfw_norm, disk_norm, sag_mass_scale, f_sub, vdis)
+    return (nfw_norm, disk_norm, log_sag_mass_DM, f_sub, vdis)
 
 def sample_sag_orbit():
 
@@ -80,7 +80,7 @@ def run(run_index, output_folder_name, VLA_data_path, tabulated_potential):
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
     params_sampled = sample_params()
-    [nfw_norm, disk_norm, sag_mscale, f_sub, velocity_dispersion] = params_sampled
+    [nfw_norm, disk_norm, log_sag_mass_DM, f_sub, velocity_dispersion] = params_sampled
 
     potential_local = tabulated_potential.evaluate(nfw_norm, disk_norm)
 
@@ -130,12 +130,10 @@ def run(run_index, output_folder_name, VLA_data_path, tabulated_potential):
         orb.turn_physical_off()
         halo_orbit_list_physical_off_1.append(orb)
 
-    a_ref_dm = 2.1
-    a_ref_stellar = 0.45
-    m_sag_dm = 5e9 * sag_mscale
-    m_sag_stellar = m_sag_dm/20
-    rs_scale = sag_mscale ** 1./3
-    a_sag, a_stellar = a_ref_dm * rs_scale, a_ref_stellar * rs_scale
+    m_sag_dm = 10 ** log_sag_mass_DM
+    m_sag_stellar = m_sag_dm/50
+    a_sag = 1.05 * (m_sag_dm/10**8) ** 0.5
+    a_stellar = 1.05 * (m_sag_stellar/10**8) ** 0.5
 
     sag_potential_1 = galpy.potential.HernquistPotential(amp=m_sag_dm * apu.M_sun, a=a_sag * apu.kpc)
     sag_potential_2 = galpy.potential.HernquistPotential(amp=m_sag_stellar * apu.M_sun, a=a_stellar * apu.kpc)
