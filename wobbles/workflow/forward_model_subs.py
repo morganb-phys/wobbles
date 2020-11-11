@@ -77,6 +77,7 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
     count = 0
 
     for j in range(0, Nreal):
+        print(str(j)+' out of '+str(Nreal))
         nfw_norm = np.random.uniform(0.15, 0.45)
         disk_norm = np.random.uniform(0.5, 0.7)
         log_sag_mass_DM = np.random.uniform(9, 11)
@@ -87,9 +88,9 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
         velocity_dispersion_1, amp_1 = np.random.uniform(15, 25), 1.
         velocity_dispersion_2, amp_2 = None, None
         velocity_dispersion_3, amp_3 = None, None
-        orbit_ra = np.random.normal(250, 10)
-        orbit_dec = np.random.normal(-50, 2)
-        orbit_z = np.random.normal(22, 0.5)
+        orbit_ra = 220
+        orbit_dec = -50
+        orbit_z = 22
         orbit_pm_ra, orbit_pm_dec = -3.1, -2.8
         orbit_vlos = np.random.normal(140, 5)
         gal_norm = np.random.uniform(0.7, 1.3)
@@ -254,17 +255,16 @@ def _run(VLA_data_path, tabulated_potential, samples):
     return asymmetry, mean_vz
 
 #
-# Nreal = 6
-# VLA_data_path = os.getenv('HOME') + '/Code/external/wobbles/wobbles/workflow/'
-# output_folder = './output/forward_model_samples_new/'
-# f = open('./saved_potentials/tabulated_MWpot', 'rb')
-# tabulated_potential = pickle.load(f)
-# f.close()
-#
-# save_params_list = ['nfw_norm', 'disk_norm', 'log_sag_mass_DM', 'velocity_dispersion_1']
-#
-# for iter in range(Nreal):
-#     #print(str(Nreal - iter) + ' remaining...')
-#
-#     run(1, Nreal, output_folder, VLA_data_path,
-#         tabulated_potential, save_params_list, readout_step=2)
+Nreal = 2000
+VLA_data_path = os.getenv('HOME') + '/Code/external/wobbles/wobbles/workflow/'
+output_folder = './output/forward_model_samples_new/'
+f = open('./saved_potentials/tabulated_MWpot', 'rb')
+tabulated_potential = pickle.load(f)
+f.close()
+
+save_params_list = ['nfw_norm', 'disk_norm', 'log_sag_mass_DM', 'velocity_dispersion_1']
+
+    #print(str(Nreal - iter) + ' remaining...')
+
+run(int(sys.argv[1]), Nreal, output_folder, VLA_data_path,
+    tabulated_potential, save_params_list, readout_step=50)
