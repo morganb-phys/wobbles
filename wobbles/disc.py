@@ -9,22 +9,38 @@ from galpy.util.bovy_conversion import get_physical
 
 class Disc(object):
 
-    def __init__(self, potential_extension_local):
+    def __init__(self, potential_extension_local, potential_extension_global=None):
 
-        self.potential_extension = potential_extension_local
+        """
+
+        :param potential_extension_local: An instance of PotentialExtension used to compute properties of the local matter density
+        :param potential_extension_global: An instance of PotentialExtension used to compute large scale properties of galaxy,
+        for example the orbit of a perturber and the the suns position relative to the center of the galaxy
+        """
+
+        self.potential_extension_local = potential_extension_local
+        if potential_extension_global is None:
+            potential_extension_global = potential_extension_local
+        self.potential_extension_global = potential_extension_global
+
         self._z_units_internal = potential_extension_local.z_units_internal
         self._v_units_internal = potential_extension_local.v_units_internal
         self._units = potential_extension_local.units
 
-    def distribution_function(self, delta_action, rho_midplane=None, verbose=False):
+    def distribution_function(self, delta_action, velocity_dispersion_local, rho_midplane=None,
+                              component_amplitude=None, verbose=False):
 
         """
         This routine computes a distribution function for the vertical density and velocity around the sun given a
         perturbation to the action
 
         :param delta_action: a perturbation to the action
+        :param velocity_dispersion_local: the local velocity dispersion of the disk
         :param rho_midplane: the midplane density of the disk. If not specified, it will be computed from the local_potential.
         For Isothermal potentials, you need to manually specify this as galpy will not compute it for you
+        :param component_amplitude: the amplitude of each component of the distribution function, must sum to one. If
+        not specified, a single component distribution function is assumed. If specified, must be a list the same length as
+        velocity_dispersion_local.
 
         :return: An instance of DistributionFucntion (see wobbles.distribution_function)
         """
@@ -34,7 +50,7 @@ class Disc(object):
         length_scale = self._units['ro']
 
         if rho_midplane is None:
-            rho_midplane = self.potential_extension.rho_midplane
+            rho_midplane = self.potential_extension_local.rho_midplane
             if verbose:
                 print('computed a midplane density of '+str(rho_midplane * density_scale) +' [Msun/pc^3]')
         else:
@@ -42,17 +58,35 @@ class Disc(object):
             if verbose:
                 print('using a specified midplane density of '+ str(rho_midplane * density_scale) +' [Msun/pc^3]')
 
-        velocity_dispersion_local = self.potential_extension.velocity_dispersion_local
-        vertical_freq = self.potential_extension.vertical_freq
+        if component_amplitude is None:
+            component_amplitude = [1]
+        else:
+            if not isinstance(component_amplitude, list):
+                raise Exception('If specified, component amplitude must be a list')
+        if np.sum(component_amplitude) != 1:
+            raise Exception('component amplitudes must sum to one')
+
+        if not isinstance(velocity_dispersion_local, list):
+            velocity_dispersion_local = [velocity_dispersion_local]
+
+        if len(velocity_dispersion_local) != len(component_amplitude):
+            raise Exception('if component amplitude is specified as a list, it must be the same length as '
+                            'velocity_dispersion local')
+
+        vdis_local_units_internal = []
+        for vdis in velocity_dispersion_local:
+            vdis_local_units_internal.append(vdis / velocity_scale)
+
+        vertical_freq = self.potential_extension_local.vertical_freq
 
         if verbose:
-            print('local velocity dispersion (km/sec): ', velocity_dispersion_local * velocity_scale)
+            for vdis in vdis_local_units_internal:
+                print('local velocity dispersion (km/sec): ', vdis * velocity_scale)
             print('vertical frequency: ', vertical_freq)
 
-        dF = DistributionFunction(rho_midplane, velocity_dispersion_local,
-                                  self.potential_extension.action + delta_action,
-                                  vertical_freq, self._v_units_internal,
-                                  self._z_units_internal, length_scale, velocity_scale, density_scale)
+        J = self.potential_extension_local.action + delta_action
+        dF = DistributionFunction(rho_midplane, component_amplitude, vdis_local_units_internal, J, vertical_freq,
+                                  self._v_units_internal, self._z_units_internal, length_scale, velocity_scale, density_scale)
 
         return dF
 
@@ -102,16 +136,16 @@ class Disc(object):
 
         time_step = time_internal_units[1] - time_internal_units[0]
 
-        delta_J = simps(v_z * force, dx=time_step) / self.potential_extension.angle
+        delta_J = simps(v_z * force, dx=time_step) / self.potential_extension_local.angle
 
         return delta_J
 
     def _satellite_force(self, sat_time, orb_time, satellite_orbit_physical_off, phase_space_orbits_physical_off,
                         satellite_potential_physical_off, verbose):
 
-        r_over_r0 = self.potential_extension.R_over_R0_eval
+        r_over_r0 = self.potential_extension_global.R_over_R0_eval
 
-        vc_over_v0 = self.potential_extension.Vc
+        vc_over_v0 = self.potential_extension_global.Vc
 
         freq = vc_over_v0 / r_over_r0
 
@@ -138,7 +172,7 @@ class Disc(object):
 
         orbits.turn_physical_off()
 
-        pot = self.potential_extension.vertical_disk_potential_physical_off
+        pot = self.potential_extension_local.vertical_disk_potential_physical_off
         orbits.integrate(time_units_internal, pot)
 
         self._orbits = orbits

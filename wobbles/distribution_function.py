@@ -5,6 +5,94 @@ from scipy.interpolate import interp1d
 
 class DistributionFunction(object):
 
+    def __init__(self, rho_midplane, normalization_list, velocity_dispersion_list, J, nu, v_domain, z_domain, length_scale,
+                 velocity_scale, density_scale):
+
+        """
+        Constructs a distribution function for the disk as a sum of quasi-isothermal distribution functions
+
+        unit: [GIU] means [galpy internal units]
+        unit: [PHYS] means a physical unit
+        unit: [F] means a floating point number
+
+        :param rho_midplane [GIU]: the midplane density of the disk in galpy internal units
+        :param normalization_list [F]: a list of normalizations for each component; must add to one
+        :param velocity_dispersion_list [GIU]: a list of velocity dispersions for each component of the disk
+        :param J [GIU]: the vertical action computed for each point in phase space
+        :param nu [GIU]: the vertical frequency of the disk
+        :param v_domain [GIU]: the velocity domain over which the phase space distribution is computed
+        :param z_domain [GIU]: the vertial height over which the phase space distribution is computed
+        :param length_scale [PHYS]: a physial length scale for the vertical height
+        :param velocity_scale [PHYS]: a physical velocity scale
+        :param density_scale [PHYS]: a physical density scale
+        """
+
+        assert np.sum(normalization_list) == 1
+        assert len(normalization_list) == len(velocity_dispersion_list)
+
+        dF_list = []
+        for sigma in velocity_dispersion_list:
+
+            f = _SingleDistributionFunction(rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
+                                            density_scale)
+            dF_list.append(f)
+
+        self.dF_list = dF_list
+
+        self.z = self.dF_list[0].z
+        self.v = self.dF_list[0].v
+        self.normalization_list = normalization_list
+
+    def velocity_moment(self, n):
+
+        v_moment = 0
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            v_moment += scale * df.velocity_moment(n)
+        return v_moment
+
+    @property
+    def A(self):
+
+        A = 0
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            A += scale * df.A
+        return A
+
+    @property
+    def density(self):
+
+        rho = 0
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            rho += scale * df.density
+        return rho
+
+    @property
+    def mean_v(self):
+
+        mean_v = 0
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            mean_v += scale * df.mean_v
+        return mean_v
+
+    @property
+    def velocity_dispersion(self):
+
+        vdis = 0
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            vdis += scale * df.velocity_dispersion
+        return vdis
+
+    @property
+    def mean_v_relative(self):
+
+        mean_v_rel = 0
+        for df, scale in zip(self.dF_list, self.normalization_list):
+            mean_v_rel += scale * df.mean_v_relative
+        return mean_v_rel
+
+
+class _SingleDistributionFunction(object):
+
     def __init__(self, rho, sigma, J, nu, v_domain, z_domain, length_scale,
                  velocity_scale, density_scale):
         """ exp(J * nu / sigma^2)"""
@@ -85,14 +173,3 @@ class DistributionFunction(object):
 
         v = self.mean_v
         return v - np.mean(v)
-
-    @property
-    def dphi_dz(self):
-
-        norm = self.normalization
-        velocity_dispersion = self.velocity_dispersion
-
-        dz = abs(self.z[1] - self.z[0])
-        d_phi_dz = -np.gradient(velocity_dispersion, dz) / norm
-
-        return d_phi_dz

@@ -2,7 +2,8 @@ from wobbles.disc import Disc
 import numpy as np
 
 def compute_df_time_dependent(potential_extension_local, satellite_integration_time_list,
-                              satellite_orbit_list, satellite_potential_list, rho_midplane=None, verbose=False):
+                              satellite_orbit_list, satellite_potential_list, velocity_dispersion_local,
+                              rho_midplane=None, component_amplitude=None, verbose=False):
 
     """
     Does this seem right?
@@ -11,6 +12,7 @@ def compute_df_time_dependent(potential_extension_local, satellite_integration_t
     :param conversion_to_internal_time:
     :param satellite_orbit_list:
     :param satellite_potential_list:
+    :param velocity_dispersion_local:
     :param rho_midplane:
     :return:
     """
@@ -22,17 +24,18 @@ def compute_df_time_dependent(potential_extension_local, satellite_integration_t
 
         t_end_sat = satellite_integration_time[-1]-satellite_integration_time[0]
         t_eval_orbits = np.linspace(0., t_end_sat, len(satellite_integration_time))
-        
+
         df,  dj, f = compute_df(disc_instance, satellite_integration_time, satellite_orbit_list, 
-                                satellite_potential_list, rho_midplane, t_eval_orbits, verbose)
+                                satellite_potential_list, velocity_dispersion_local, component_amplitude,
+                                rho_midplane, t_eval_orbits, verbose)
         df_list.append(df)
         dj_list.append(dj)
         force_list.append(f)
 
     return df_list, dj_list, force_list
 
-def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential_list, rho_midplane=None,
-               t_eval_orbits=None, verbose=False):
+def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential_list, velocity_dispersion_local,
+                component_amplitude=None, rho_midplane=None, t_eval_orbits=None, verbose=False):
 
     """
     This function executes a certain workflow sequence: From a the orbit of a passing satellite, compute the
@@ -44,6 +47,10 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
     :param t_eval_satellite: The time over which to compute the perturbation from the satellite in internal units
     :param satellite_orbit_list: A list of perturbing satellite orbits
     :param satellite_potential_list: A list of satellite potentials corresponding to each orbit
+    :param velocity_dispersion_local: The local velocity dispersion [km/sec]; if specified as a list, it corresponds to
+    each component of a distribution function and must be the same length as component_amplitude
+    :param component_amplitude: a list of amplitudes for each component in the disk; if specified must sum to one and be
+    the same length as velocity dispersion local
     :param rho_midplane: the midplane density of the disk, needs to be specified for Isothermal potentials. For others it can
     be directly computed from the local potential (see rho_midplane method in potential_extension class)
     :param t_eval_orbits: the times when to evaluate the orbits of test particles in phase space; if None, reverts to the
@@ -62,11 +69,11 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
     disc_phase_space_orbits = disc.orbits_in_phase_space(t_eval_orbits)
         
     force = disc.satellite_forces(t_eval_satellite, t_eval_orbits, satellite_orbit_list, satellite_potential_list,
-                                  disc_phase_space_orbits ,verbose)
+                                  disc_phase_space_orbits, verbose)
 
     delta_J = disc.action_impulse(force, t_eval_orbits, satellite_orbit_list, satellite_potential_list,
                                  disc_phase_space_orbits)
 
-    dF = disc.distribution_function(delta_J, rho_midplane, verbose)
+    dF = disc.distribution_function(delta_J, velocity_dispersion_local, rho_midplane, component_amplitude, verbose)
 
     return dF, delta_J, force
