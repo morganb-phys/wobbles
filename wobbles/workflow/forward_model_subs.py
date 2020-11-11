@@ -65,44 +65,34 @@ def sample_sag_orbit():
     return orbit_init_sag
 
 def run(run_index, Nreal, output_folder_name, VLA_data_path,
-        tabulated_potential, save_params_list, readout_step=100):
-
-    # 'nfw_norm', 'disk_norm',
-    #  'log_sag_mass_DM', 'sag_mass2light',
-    #  'f_sub',
-    #  'velocity_dispersion', 'compoent_amplitude',
-    #  'orbit_ra', 'orbit_dec', 'orbit_z', 'orbit_pm_ra', 'orbit_pm_dec', 'orbit_vlos'
+        tabulated_potential, save_params_list, readout_step, parameter_priors):
 
     init_arrays = True
     count = 0
 
     for j in range(0, Nreal):
-        print(str(j)+' out of '+str(Nreal))
-        nfw_norm = np.random.uniform(0.15, 0.45)
-        disk_norm = np.random.uniform(0.5, 0.7)
-        log_sag_mass_DM = np.random.uniform(9, 11)
-        sag_mass2light = abs(np.random.normal(50, 5))
-        f_sub = 0.
-        log_slope = -1.9
-        m_host = 1.3 * 10 ** 12
-        velocity_dispersion_1, amp_1 = np.random.uniform(15, 25), 1.
-        velocity_dispersion_2, amp_2 = None, None
-        velocity_dispersion_3, amp_3 = None, None
-        orbit_ra = 220
-        orbit_dec = -50
-        orbit_z = 22
-        orbit_pm_ra, orbit_pm_dec = -3.1, -2.8
-        orbit_vlos = np.random.normal(140, 5)
-        gal_norm = np.random.uniform(0.7, 1.3)
 
-        samples = {'nfw_norm': nfw_norm, 'disk_norm': disk_norm, 'log_sag_mass_DM': log_sag_mass_DM,
-                   'sag_mass2light': sag_mass2light, 'f_sub': f_sub, 'log_slope': log_slope, 'm_host': m_host,
-                   'velocity_dispersion_1': velocity_dispersion_1, 'velocity_dispersion_2': velocity_dispersion_2,
-                  'velocity_dispersion_3': velocity_dispersion_3, 'component_amplitude_1': amp_1,
-                   'component_amplitude_2': amp_2, 'component_amplitude_3': amp_3,
-                   'orbit_ra': orbit_ra, 'orbit_dec': orbit_dec,
-                   'orbit_z': orbit_z, 'orbit_pm_ra': orbit_pm_ra, 'orbit_pm_dec': orbit_pm_dec,
-                   'orbit_vlos': orbit_vlos, 'gal_norm': gal_norm}
+        samples = {}
+        for param_prior in parameter_priors:
+
+            param_name = param_prior[0]
+            prior_type = param_prior[1]
+            prior_args = param_prior[2]
+            positive_definite = param_prior[3]
+            if prior_type == 'g':
+                value = np.random.normal(*prior_args)
+            elif prior_type == 'u':
+                value = np.random.uniform(*prior_args)
+            elif prior_type == 'f':
+                value = prior_args
+            else:
+                raise Exception('param prior '+str(param_prior[0]) +' not valid.')
+            if positive_definite:
+                print(value, param_name)
+                value = abs(value)
+            samples[param_name] = value
+
+        print(str(j)+' out of '+str(Nreal))
 
         A, vz = _run(VLA_data_path, tabulated_potential, samples)
         for param in save_params_list:
@@ -254,6 +244,28 @@ def _run(VLA_data_path, tabulated_potential, samples):
     asymmetry, mean_vz = dF.A, dF.mean_v_relative
     return asymmetry, mean_vz
 
+
+# param_prior = []
+# param_prior += [['nfw_norm', 'u', [0.15, 0.45], False]]
+# param_prior += [['disk_norm', 'u', [0.5, 0.7], False]]
+# param_prior += [['log_sag_mass_DM', 'u', [8.7, 11], False]]
+# param_prior += [['sag_mass2light', 'g', [50, 5], True]]
+# param_prior += [['f_sub', 'f', 0., False]]
+# param_prior += [['log_slope', 'f', -1.9, False]]
+# param_prior += [['m_host', 'f', 1.2e+12, False]]
+# param_prior += [['velocity_dispersion_1', 'u', [15, 25], False]]
+# param_prior += [['component_amplitude_1', 'f', 1, False]]
+# param_prior += [['velocity_dispersion_2', 'f', None, False]]
+# param_prior += [['component_amplitude_2', 'f', None, False]]
+# param_prior += [['velocity_dispersion_3', 'f', None, False]]
+# param_prior += [['component_amplitude_3', 'f', None, False]]
+# param_prior += [['orbit_ra', 'f', 220, False]]
+# param_prior += [['orbit_dec', 'f', -50, False]]
+# param_prior += [['orbit_z', 'f', 22, False]]
+# param_prior += [['orbit_pm_ra', 'f', -3.1, False]]
+# param_prior += [['orbit_pm_dec', 'f', -2.8, False]]
+# param_prior += [['orbit_vlos', 'f', 140, False]]
+# param_prior += [['gal_norm', 'u', [0.7, 1.3], False]]
 #
 # Nreal = 2000
 # VLA_data_path = os.getenv('HOME') + '/Code/external/wobbles/wobbles/workflow/'
@@ -262,9 +274,6 @@ def _run(VLA_data_path, tabulated_potential, samples):
 # tabulated_potential = pickle.load(f)
 # f.close()
 #
-# save_params_list = ['nfw_norm', 'disk_norm', 'log_sag_mass_DM', 'velocity_dispersion_1']
-#
-#     #print(str(Nreal - iter) + ' remaining...')
-#
-# run(int(sys.argv[1]), Nreal, output_folder, VLA_data_path,
-#     tabulated_potential, save_params_list, readout_step=50)
+# save_params_list = ['nfw_norm', 'disk_norm', 'log_sag_mass_DM', 'velocity_dispersion_1', 'gal_norm']
+# run(1, Nreal, output_folder, VLA_data_path,
+#      tabulated_potential, save_params_list, readout_step=50, parameter_priors=param_prior)
