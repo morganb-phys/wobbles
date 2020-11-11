@@ -255,16 +255,16 @@ def _run(VLA_data_path, tabulated_potential, samples):
     return asymmetry, mean_vz
 
 #
-Nreal = 2000
-VLA_data_path = os.getenv('HOME') + '/Code/external/wobbles/wobbles/workflow/'
-output_folder = './output/forward_model_samples_new/'
-f = open('./saved_potentials/tabulated_MWpot', 'rb')
-tabulated_potential = pickle.load(f)
-f.close()
-
-save_params_list = ['nfw_norm', 'disk_norm', 'log_sag_mass_DM', 'velocity_dispersion_1']
-
-    #print(str(Nreal - iter) + ' remaining...')
-
-run(int(sys.argv[1]), Nreal, output_folder, VLA_data_path,
-    tabulated_potential, save_params_list, readout_step=50)
+# Nreal = 2000
+# VLA_data_path = os.getenv('HOME') + '/Code/external/wobbles/wobbles/workflow/'
+# output_folder = './output/forward_model_samples_new/'
+# f = open('./saved_potentials/tabulated_MWpot', 'rb')
+# tabulated_potential = pickle.load(f)
+# f.close()
+#
+# save_params_list = ['nfw_norm', 'disk_norm', 'log_sag_mass_DM', 'velocity_dispersion_1']
+#
+#     #print(str(Nreal - iter) + ' remaining...')
+#
+# run(int(sys.argv[1]), Nreal, output_folder, VLA_data_path,
+#     tabulated_potential, save_params_list, readout_step=50)
