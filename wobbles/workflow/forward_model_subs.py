@@ -88,7 +88,7 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
             else:
                 raise Exception('param prior '+str(param_prior[0]) +' not valid.')
             if positive_definite:
-                print(value, param_name)
+
                 value = abs(value)
             samples[param_name] = value
 

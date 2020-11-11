@@ -35,7 +35,7 @@ def compute_df_time_dependent(potential_extension_local, satellite_integration_t
     return df_list, dj_list, force_list
 
 def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential_list, velocity_dispersion_local,
-                component_amplitude=None, rho_midplane=None, t_eval_orbits=None, verbose=False):
+                component_amplitude=None, component_densities=None, rho_midplane=None, t_eval_orbits=None, verbose=False):
 
     """
     This function executes a certain workflow sequence: From a the orbit of a passing satellite, compute the
@@ -51,6 +51,12 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
     each component of a distribution function and must be the same length as component_amplitude
     :param component_amplitude: a list of amplitudes for each component in the disk; if specified must sum to one and be
     the same length as velocity dispersion local
+    :param component_densities [M_solar/pc^3]: a list of densities corresponding to each velocity dispersion specified in velocity_dispersion_local
+    This argument is ignored if
+    A) velocity dispersion local is not a list, in which case the midplane density is computed as rho_midplane
+    B) component amplitude is specified, in which case the component densities are computed as
+    [amp_1 * rho_midplane, amp_2 * rho_midplane... ] where amp_1, amp_2... are specified in component_amplitude
+
     :param rho_midplane: the midplane density of the disk, needs to be specified for Isothermal potentials. For others it can
     be directly computed from the local potential (see rho_midplane method in potential_extension class)
     :param t_eval_orbits: the times when to evaluate the orbits of test particles in phase space; if None, reverts to the
@@ -74,6 +80,7 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
     delta_J = disc.action_impulse(force, t_eval_orbits, satellite_orbit_list, satellite_potential_list,
                                  disc_phase_space_orbits)
 
-    dF = disc.distribution_function(delta_J, velocity_dispersion_local, rho_midplane, component_amplitude, verbose)
+    dF = disc.distribution_function(delta_J, velocity_dispersion_local, rho_midplane, component_amplitude, component_densities,
+                                    verbose)
 
     return dF, delta_J, force

@@ -28,7 +28,7 @@ class Disc(object):
         self._units = potential_extension_local.units
 
     def distribution_function(self, delta_action, velocity_dispersion_local, rho_midplane=None,
-                              component_amplitude=None, verbose=False):
+                              component_amplitude=None, component_densities=None, verbose=False):
 
         """
         This routine computes a distribution function for the vertical density and velocity around the sun given a
@@ -41,6 +41,7 @@ class Disc(object):
         :param component_amplitude: the amplitude of each component of the distribution function, must sum to one. If
         not specified, a single component distribution function is assumed. If specified, must be a list the same length as
         velocity_dispersion_local.
+        :param component_densities: overrides component_amplitude if specified (see documentation in compute_df)
 
         :return: An instance of DistributionFucntion (see wobbles.distribution_function)
         """
@@ -49,12 +50,37 @@ class Disc(object):
         velocity_scale = self._units['vo']
         length_scale = self._units['ro']
 
+        if component_densities is not None:
+
+            if not isinstance(component_densities, list):
+                raise Exception('component densities should be a list with len(velocity_dispersion) '
+                                'of densities in physical units M/pc^3')
+            else:
+                assert len(component_densities) == len(velocity_dispersion_local), 'each component density must correspond ' \
+                                                                                   'to a unique velocity dispersion'
+
+            if rho_midplane is not None:
+                error_msg = 'You specified rho_midplane as well as rho_midplane, but you much choose one or the other.' \
+                            'if component_densities is specified rho_midplane = sum(component_densities).'
+                raise Exception(error_msg)
+            if component_amplitude is not None:
+                error_msg = 'You specified component_amplitude as well as component_densities, but you much choose one or the other.'
+                raise Exception(error_msg)
+
+            # DistributionFunction class expects density in internal units
+            rho_midplane_physical = np.sum(component_densities)
+            rho_midplane = rho_midplane_physical / density_scale
+
+            component_amplitude = [density/rho_midplane_physical for density in component_densities]
+            assert_sum_to_unity = False
+        else:
+            assert_sum_to_unity = True
+
         if rho_midplane is None:
             rho_midplane = self.potential_extension_local.rho_midplane
             if verbose:
                 print('computed a midplane density of '+str(rho_midplane * density_scale) +' [Msun/pc^3]')
         else:
-            assert rho_midplane is not None
             if verbose:
                 print('using a specified midplane density of '+ str(rho_midplane * density_scale) +' [Msun/pc^3]')
 
@@ -63,15 +89,16 @@ class Disc(object):
         else:
             if not isinstance(component_amplitude, list):
                 raise Exception('If specified, component amplitude must be a list')
-        if np.sum(component_amplitude) != 1:
+
+        if assert_sum_to_unity and np.sum(component_amplitude) != 1:
             raise Exception('component amplitudes must sum to one')
 
         if not isinstance(velocity_dispersion_local, list):
             velocity_dispersion_local = [velocity_dispersion_local]
 
         if len(velocity_dispersion_local) != len(component_amplitude):
-            raise Exception('if component amplitude is specified as a list, it must be the same length as '
-                            'velocity_dispersion local')
+            raise Exception('if component amplitude or component_density is specified as a list, it must be the same length as '
+                            'velocity_dispersion')
 
         vdis_local_units_internal = []
         for vdis in velocity_dispersion_local:
@@ -80,9 +107,12 @@ class Disc(object):
         vertical_freq = self.potential_extension_local.vertical_freq
 
         if verbose:
-            for vdis in vdis_local_units_internal:
-                print('local velocity dispersion (km/sec): ', vdis * velocity_scale)
+            for i, (vdis, norm) in enumerate(zip(vdis_local_units_internal, component_amplitude)):
+                print('velocity dispersion '+str(i)+' (km/sec): ', vdis * velocity_scale)
+                print('amplitude of component '+str(i) + ': ', norm)
+                print('density ' + str(i) + ' (km/sec): ', norm * rho_midplane * density_scale)
             print('vertical frequency: ', vertical_freq)
+            print('\n')
 
         J = self.potential_extension_local.action + delta_action
         dF = DistributionFunction(rho_midplane, component_amplitude, vdis_local_units_internal, J, vertical_freq,
