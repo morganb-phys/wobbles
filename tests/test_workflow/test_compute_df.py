@@ -8,6 +8,7 @@ import galpy
 from galpy.potential import HernquistPotential
 from wobbles.disc import Disc
 from wobbles.workflow.compute_distribution_function import compute_df
+from galpy import util
 
 class TestComputeDistributionFunction(object):
 
@@ -39,27 +40,38 @@ class TestComputeDistributionFunction(object):
         self.time_internal_units = self.sag_orbit[0].time()
 
         velocity_dispersion_local = [20.5, 20.5]
-        normalizations = [0.5, 0.5]
+        normalizations = [0.7, 0.3]
         self.dF1, self.delta_J1, self.force1 = compute_df(self.disc, self.time_internal_units,
                                            self.sag_orbit, self.sag_potential,
                                            velocity_dispersion_local, normalizations,
-                                           verbose=False)
+                                           verbose=True)
 
         velocity_dispersion_local = [20.5]
         normalizations = [1.]
         self.dF2, self.delta_J2, self.force2 = compute_df(self.disc, self.time_internal_units,
                                            self.sag_orbit, self.sag_potential,
                                            velocity_dispersion_local, normalizations,
-                                           verbose=False)
+                                           verbose=True)
+
+        self.component_densities = [0.7 * 0.1, 0.3 * 0.1]
+        velocity_dispersion_local = [20.5, 20.5]
+        self.dF3, self.delta_J3, self.force3 = compute_df(self.disc, self.time_internal_units,
+                                                          self.sag_orbit, self.sag_potential,
+                                                          velocity_dispersion_local,
+                                                          component_densities=self.component_densities,
+                                                          verbose=True)
+
 
         sag_potential_1 = galpy.potential.HernquistPotential(amp=0. * apu.M_sun, a=3. * apu.kpc)
         sag_potential_2 = galpy.potential.HernquistPotential(amp=0. * apu.M_sun, a=0.65 * apu.kpc)
         sag_potential_nopert = [sag_potential_1 + sag_potential_2]
         galpy.potential.turn_physical_off(sag_potential_nopert)
+        velocity_dispersion_local = 20.5
+        normalizations = [1.]
         self.dF_nopert, self.delta_J_nopert, self.force_nopert = compute_df(self.disc, self.time_internal_units,
                                                           self.sag_orbit, sag_potential_nopert,
                                                           velocity_dispersion_local, normalizations,
-                                                          verbose=False)
+                                                          verbose=True)
 
     def test_multi_component(self):
 
@@ -77,6 +89,20 @@ class TestComputeDistributionFunction(object):
         vdis1, vdis2 = self.dF1.velocity_dispersion, self.dF2.velocity_dispersion
         npt.assert_almost_equal(vdis1, vdis2)
 
+    def test_multi_component_density(self):
+
+        rho1 = self.dF1.density
+        rho2 = self.dF2.density
+        rho3 = self.dF3.density
+        import matplotlib.pyplot as plt
+
+        plt.plot(rho1, color='m')
+        plt.plot(rho2, color='k')
+        plt.plot(rho3, color='r')
+        plt.show()
+        ratio = max(rho3)/max(rho2)
+        print(ratio)
+
     def test_no_perturbation(self):
 
         npt.assert_almost_equal(self.delta_J_nopert, np.zeros_like(self.delta_J_nopert))
@@ -85,7 +111,6 @@ class TestComputeDistributionFunction(object):
         npt.assert_almost_equal(A, np.zeros_like(A), decimal=3)
 
         'TODO: THIS TEST FAILS, THE MEAN V CURVE HAS A WEIRD SHAPE BELOW Z = 0'
-
         vz = self.dF_nopert.mean_v_relative[1:-1]
         # import matplotlib.pyplot as plt
         # plt.plot(vz); plt.show()
@@ -105,6 +130,7 @@ class TestComputeDistributionFunction(object):
 # t.test_multi_component()
 # t.test_exceptions()
 # t.test_no_perturbation()
+#t.test_multi_component_density()
 
 # comment this out if you uncomment the lines above
 if __name__ == '__main__':

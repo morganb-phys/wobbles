@@ -27,13 +27,13 @@ class DistributionFunction(object):
         :param density_scale [PHYS]: a physical density scale
         """
 
-        assert np.sum(normalization_list) == 1
         assert len(normalization_list) == len(velocity_dispersion_list)
 
         dF_list = []
-        for sigma in velocity_dispersion_list:
 
-            f = _SingleDistributionFunction(rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
+        for norm, sigma in zip(normalization_list, velocity_dispersion_list):
+
+            f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
                                             density_scale)
             dF_list.append(f)
 
@@ -41,62 +41,58 @@ class DistributionFunction(object):
 
         self.z = self.dF_list[0].z
         self.v = self.dF_list[0].v
-        self.normalization_list = normalization_list
+        self.weights = np.array(normalization_list) / np.sum(normalization_list)
 
     def velocity_moment(self, n):
 
         v_moment = 0
-        for df, scale in zip(self.dF_list, self.normalization_list):
-            v_moment += scale * df.velocity_moment(n)
+        for df, norm in zip(self.dF_list, self.weights):
+            v_moment += norm * df.velocity_moment(n)
         return v_moment
 
     @property
     def A(self):
 
         A = 0
-        for df, scale in zip(self.dF_list, self.normalization_list):
-            A += scale * df.A
+        for df, norm in zip(self.dF_list, self.weights):
+            A += df.A * norm
         return A
 
     @property
     def density(self):
 
         rho = 0
-        for df, scale in zip(self.dF_list, self.normalization_list):
-            rho += scale * df.density
+        # the density normalization is applied inside _SingleDistributionFunction
+        for df in self.dF_list:
+            rho += df.density
         return rho
 
     @property
     def mean_v(self):
 
         mean_v = 0
-        for df, scale in zip(self.dF_list, self.normalization_list):
-            mean_v += scale * df.mean_v
+        for df, norm in zip(self.dF_list, self.weights):
+            mean_v += df.mean_v * norm
         return mean_v
 
     @property
     def velocity_dispersion(self):
 
-        vdis = 0
-        for df, scale in zip(self.dF_list, self.normalization_list):
-            vdis += scale * df.velocity_dispersion
-        return vdis
+        return np.sqrt(self.velocity_moment(2) - self.velocity_moment(1) ** 2)
 
     @property
     def mean_v_relative(self):
 
-        mean_v_rel = 0
-        for df, scale in zip(self.dF_list, self.normalization_list):
-            mean_v_rel += scale * df.mean_v_relative
-        return mean_v_rel
+        mean_v = self.mean_v
+        return mean_v - np.mean(mean_v)
 
 
 class _SingleDistributionFunction(object):
 
-    def __init__(self, rho, sigma, J, nu, v_domain, z_domain, length_scale,
+    def __init__(self, rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale,
                  velocity_scale, density_scale):
         """ exp(J * nu / sigma^2)"""
-        self.rho0 = rho
+        self.rho0 = rho_midplane
         self.sigma0 = sigma
         self.J = J
         self.nu = nu
@@ -109,6 +105,11 @@ class _SingleDistributionFunction(object):
         self.length_scale = length_scale
 
         self.z, self.v = z_domain * length_scale, v_domain * velocity_scale
+
+        self._norm_density = 1.
+        rho = self.density
+        idx = int(len(rho)/2)
+        self._norm_density = self.density_scale * rho_midplane / rho[idx]
 
         x = fit_sec_squared(self.density, self.z)
         self.z_fit = x[1]
@@ -156,7 +157,7 @@ class _SingleDistributionFunction(object):
 
         rho = simps(f0, self._vdom, axis=1) * self.density_scale
 
-        return rho
+        return rho * self._norm_density
 
     @property
     def mean_v(self):
@@ -167,9 +168,3 @@ class _SingleDistributionFunction(object):
     def velocity_dispersion(self):
 
         return np.sqrt(self.velocity_moment(2) - self.velocity_moment(1) ** 2)
-
-    @property
-    def mean_v_relative(self):
-
-        v = self.mean_v
-        return v - np.mean(v)
