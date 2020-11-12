@@ -94,7 +94,9 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
 
         print(str(j)+' out of '+str(Nreal))
 
-        A, vz = _run(VLA_data_path, tabulated_potential, samples)
+        kde_instance = VLA_simulation_phasespaceKDE(VLA_data_path)
+
+        A, vz = single_iteration(samples, tabulated_potential, kde_instance)
         for param in save_params_list:
             assert param in samples.keys()
         new_params_sampled = [samples[param] for param in save_params_list]
@@ -144,7 +146,7 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
                     string_to_write += '\n'
                 f.write(string_to_write)
 
-def _run(VLA_data_path, tabulated_potential, samples):
+def single_iteration(samples, tabulated_potential, kde_instance):
 
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
@@ -169,41 +171,47 @@ def _run(VLA_data_path, tabulated_potential, samples):
             component_amplitude.append(samples['component_amplitude_3'])
     assert len(velocity_dispersion) == len(component_amplitude)
 
-    potential_local = tabulated_potential.evaluate(samples['nfw_norm'],
+    try:
+        potential_local = tabulated_potential.evaluate(samples['nfw_norm'],
                                                    samples['disk_norm'])
+    except:
+        # prior sampled out of bounds
+        print('out of bounds: ', samples['nfw_norm'], samples['disk_norm'])
+        return None, None
 
     galactic_potential = sample_galactic_potential(samples['gal_norm'])
 
     potential_global = PotentialExtension(galactic_potential, 2, 120, 100,
                                           compute_action_angle=False)
 
-    kde = VLA_simulation_phasespaceKDE(VLA_data_path)
-
     mlow, mhigh = 5 * 10 ** 6, 10 ** 9
     N_halos = normalization(samples['f_sub'], samples['log_slope'], samples['m_host'], mlow, mhigh)
 
-    ####################################### Generate subhalo orbits #######################################
-    sample_orbits_0 = generate_sample_orbits_kde(N_halos, kde, galactic_potential, time_Gyr)
-    #print('generated ' + str(N_halos) + ' halos... ')
-    rs_host, r_core = 30, 30.
-    args, func = (rs_host, r_core), core_nfw_pdf
-    inds_keep = filter_orbits_NFW(sample_orbits_0, time_Gyr, func, args)
-    sample_orbits_1 = [sample_orbits_0[idx] for idx in inds_keep]
-    dr_max = 8  # kpc
-    nearby_orbits_1_inds, _ = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, potential_global, R_solar=8,
-                                                     dr_max=dr_max, pass_through_disk_limit=3, tdep=True)
-    nearby_orbits_1 = [sample_orbits_0[idx] for idx in nearby_orbits_1_inds]
-    n_nearby_1 = len(nearby_orbits_1)
-    #print('kept ' + str(n_nearby_1) + ' halos... ')
-    ############################################################################################################
-
-    ####################################### Set subhalo properties #######################################
-    halo_masses_1 = sample_mass_function(n_nearby_1, samples['log_slope'], mlow, mhigh)
-    halo_concentrations_1 = sample_concentration(halo_masses_1)
+    nearby_orbits_1 = []
     halo_potentials_1 = []
-    for m, c in zip(halo_masses_1, halo_concentrations_1):
-        halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
-    #####################################################################################################
+    halo_orbit_list_physical_off_1 = []
+    if samples['f_sub'] is not None and samples['f_sub'] > 0:
+        ####################################### Generate subhalo orbits #######################################
+        sample_orbits_0 = generate_sample_orbits_kde(N_halos, kde_instance, galactic_potential, time_Gyr)
+        #print('generated ' + str(N_halos) + ' halos... ')
+        rs_host, r_core = 30, 30.
+        args, func = (rs_host, r_core), core_nfw_pdf
+        inds_keep = filter_orbits_NFW(sample_orbits_0, time_Gyr, func, args)
+        sample_orbits_1 = [sample_orbits_0[idx] for idx in inds_keep]
+        dr_max = 8  # kpc
+        nearby_orbits_1_inds, _ = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, potential_global, R_solar=8,
+                                                         dr_max=dr_max, pass_through_disk_limit=3, tdep=True)
+        nearby_orbits_1 = [sample_orbits_0[idx] for idx in nearby_orbits_1_inds]
+        n_nearby_1 = len(nearby_orbits_1)
+        #print('kept ' + str(n_nearby_1) + ' halos... ')
+        ############################################################################################################
+
+        ####################################### Set subhalo properties #######################################
+        halo_masses_1 = sample_mass_function(n_nearby_1, samples['log_slope'], mlow, mhigh)
+        halo_concentrations_1 = sample_concentration(halo_masses_1)
+        for m, c in zip(halo_masses_1, halo_concentrations_1):
+            halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
+        #####################################################################################################
 
     ####################################### Integrate orbit of Sag. #################################
     orbit_init_sag = [samples['orbit_ra'] * apu.deg, samples['orbit_dec'] * apu.deg,
@@ -212,7 +220,6 @@ def _run(VLA_data_path, tabulated_potential, samples):
                       samples['orbit_vlos'] * apu.km / apu.s]
     sag_orbit_phsical_off = integrate_orbit(orbit_init_sag, galactic_potential, time_Gyr)
     sag_orbit = [sag_orbit_phsical_off]
-    halo_orbit_list_physical_off_1 = []
     for orb in nearby_orbits_1:
         orb.turn_physical_off()
         halo_orbit_list_physical_off_1.append(orb)
