@@ -163,6 +163,7 @@ def single_iteration(samples, tabulated_potential, kde_instance):
 
     velocity_dispersion = [samples['velocity_dispersion_1']]
     component_amplitude = [samples['component_amplitude_1']]
+
     if samples['velocity_dispersion_2'] is not None:
         velocity_dispersion.append(samples['velocity_dispersion_2'])
         component_amplitude.append(samples['component_amplitude_2'])
