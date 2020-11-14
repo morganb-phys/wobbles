@@ -65,7 +65,8 @@ def sample_sag_orbit():
     return orbit_init_sag
 
 def run(run_index, Nreal, output_folder_name, VLA_data_path,
-        tabulated_potential, save_params_list, readout_step, parameter_priors):
+        tabulated_potential, save_params_list, readout_step, parameter_priors,
+        phase_space_res):
 
     init_arrays = True
     count = 0
@@ -96,7 +97,7 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
 
         kde_instance = VLA_simulation_phasespaceKDE(VLA_data_path)
 
-        A, vz = single_iteration(samples, tabulated_potential, kde_instance)
+        A, vz = single_iteration(samples, tabulated_potential, kde_instance, phase_space_res)
         for param in save_params_list:
             assert param in samples.keys()
         new_params_sampled = [samples[param] for param in save_params_list]
@@ -146,7 +147,7 @@ def run(run_index, Nreal, output_folder_name, VLA_data_path,
                     string_to_write += '\n'
                 f.write(string_to_write)
 
-def single_iteration(samples, tabulated_potential, kde_instance):
+def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res):
 
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
@@ -182,7 +183,7 @@ def single_iteration(samples, tabulated_potential, kde_instance):
 
     galactic_potential = sample_galactic_potential(samples['gal_norm'])
 
-    potential_global = PotentialExtension(galactic_potential, 2, 120, 100,
+    potential_global = PotentialExtension(galactic_potential, 2, 120, phase_space_res,
                                           compute_action_angle=False)
 
     mlow, mhigh = 5 * 10 ** 6, 10 ** 9

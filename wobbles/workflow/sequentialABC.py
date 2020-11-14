@@ -71,14 +71,19 @@ class JointData(object):
 
 class DiskModel(ProbabilisticModel, Continuous):
 
-    def __init__(self, parameter_priors, to_sample_list, param_priors, args_sampler, name='DiskModel'):
+    def __init__(self, parameter_priors, to_sample_list, param_priors, args_sampler,
+                 name='DiskModel', phase_space_res=60):
 
         self.to_sample_list = to_sample_list
         self.param_prior = param_priors
         self.args_sampler = args_sampler
 
-        self._domain_1_model = np.linspace(0, 2, 100)
-        self._domain_2_model = np.linspace(-2, 2, 100)
+        self._domain_1_model = np.linspace(0, 2, phase_space_res)
+        self._domain_2_model = np.linspace(-2, 2, phase_space_res)
+        self.phase_space_res = phase_space_res
+
+        args = [arg for arg in args_sampler] + [phase_space_res]
+        self._args_sampler = tuple(args)
 
         if not isinstance(parameter_priors, list):
             raise TypeError('Input of Normal model is of type list')
@@ -92,7 +97,7 @@ class DiskModel(ProbabilisticModel, Continuous):
 
         samples = self._array_to_dictionary(samples_prior_list)
 
-        asymmetry, mean_vz = single_iteration(samples, *self.args_sampler)
+        asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
 
         if asymmetry is None or mean_vz is None:
             asymmetry = 10000 * np.ones_like(self._domain_1_model)

@@ -134,8 +134,8 @@ class _SingleDistributionFunction(object):
 
         zmin_max = np.max(self.z)
 
-        zplus = np.linspace(0, zmin_max, 100)
-        zminus = np.linspace(0, -zmin_max, 100)
+        zplus = np.linspace(0, zmin_max, len(self._vdom))
+        zminus = np.linspace(0, -zmin_max, len(self._vdom))
         rho_plus = interp(zplus)
         rho_minus = interp(zminus)
         A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
