@@ -60,10 +60,7 @@ class FittingSequence(object):
                 parameters = np.squeeze(out.get_accepted_parameters())
                 best_index = np.argmin(distances)
                 best_solution = parameters[best_index]
-                print(best_solution)
-                print(distances[best_index])
-
-                a=input('continue')
+                
             else:
                 raise Exception('sampler type '+str(fit_type)+' not recognized')
 
