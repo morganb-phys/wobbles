@@ -65,14 +65,8 @@ class MCMCSampler(MCMCBase):
         if not np.isfinite(log_prior_weight):
             return -np.inf
 
-        samples_prior_list = self._set_params(parameters_sampled)
+        asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
 
-        samples = {}
-        for param_prior in samples_prior_list:
-            param_name, value = self.prior_class.draw(param_prior)
-            samples[param_name] = value
-
-        asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
         model_data = [asymmetry, mean_vz]
 
         loglike = self._distance_calc.logLike(self._observed_data, model_data)

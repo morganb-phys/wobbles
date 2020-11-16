@@ -1,5 +1,6 @@
 import numpy as np
 from copy import deepcopy
+from wobbles.workflow.forward_model import single_iteration
 
 class MCMCBase(object):
 
@@ -16,6 +17,19 @@ class MCMCBase(object):
         self._observed_data = observed_data
 
         self._prior_set = False
+
+    def model_data_from_params(self, parameters_sampled):
+
+        samples_prior_list = self._set_params(parameters_sampled)
+
+        samples = {}
+        for param_prior in samples_prior_list:
+            param_name, value = self.prior_class.draw(param_prior)
+            samples[param_name] = value
+
+        asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
+
+        return asymmetry, mean_vz
 
     def set_prior(self, prior_class):
 

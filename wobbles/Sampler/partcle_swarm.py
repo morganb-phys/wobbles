@@ -58,7 +58,7 @@ class ParticleSwarmSampler(object):
 
         return swarm, gbest
 
-    def _minimize_func(self, parameters_sampled):
+    def model_data_from_params(self, parameters_sampled):
 
         samples_prior_list = self._set_params(parameters_sampled)
 
@@ -68,9 +68,22 @@ class ParticleSwarmSampler(object):
             samples[param_name] = value
 
         asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
-        model_data = [asymmetry, mean_vz]
 
-        loglike = self._distance_calc.logLike(self._observed_data, model_data)
+        return asymmetry, mean_vz
+
+    def _minimize_func(self, parameters_sampled):
+
+        asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
+
+        if asymmetry is None or mean_vz is None:
+            # actually any array dim > 2 would work here
+
+            loglike = -np.inf
+
+        else:
+            model_data = [asymmetry, mean_vz]
+
+            loglike = self._distance_calc.logLike(self._observed_data, model_data)
 
         return loglike
 

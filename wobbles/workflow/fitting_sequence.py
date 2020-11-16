@@ -3,6 +3,12 @@ from wobbles.Sampler.partcle_swarm import ParticleSwarmSampler
 from wobbles.Sampler.mcmc import MCMCSampler
 import numpy as np
 
+class OutputContainer(object):
+
+    def __init__(self, output):
+
+        self.output = output
+
 class FittingSequence(object):
 
     def __init__(self, kwargs_sampler):
@@ -25,7 +31,7 @@ class FittingSequence(object):
                 sampler = ParticleSwarmSampler(**self.kwargs_sampler)
                 sampler.set_prior(prior)
                 out = sampler.run(**kwargs)
-                output_list.append(['PSO', out])
+                output_list.append(['PSO', out, sampler])
                 best_solution = np.array(out[1])
 
             elif fit_type == 'MCMC':
@@ -46,7 +52,7 @@ class FittingSequence(object):
 
                 out = sampler.run(**kwargs)
 
-                output_list.append(['MCMC', out])
+                output_list.append(['MCMC', out, sampler])
                 best_index = np.argmax(out.log_prob)
                 best_solution = out.coords[best_index]
 
@@ -55,7 +61,7 @@ class FittingSequence(object):
                 sampler = PMCABCSampler(**self.kwargs_sampler)
                 sampler.set_prior(prior)
                 out = sampler.run(**kwargs)
-                output_list.append(['PMCABC', out])
+                output_list.append(['PMCABC', out, sampler])
                 distances = out.get_distances()
                 parameters = np.squeeze(out.get_accepted_parameters())
                 best_index = np.argmin(distances)

@@ -1,6 +1,19 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
+
+class DataContainer(object):
+
+    def __init__(self, z_a, a, delta_a, z_vz, v_z, delta_v_z, true_params=None):
+        self.data_asymmetry = [z_a, a, delta_a]
+        self.data_vz = [z_vz, v_z, delta_v_z]
+
+        self.true_params = true_params
+
+        self.observed_data = [a, v_z]
+        self.data_uncertainties = [delta_a, delta_v_z]
+        self.observed_data_z_eval = [z_a, z_vz]
+
 class Data(object):
 
     def __init__(self, z_observed, data, errors, sample_inds=None):
@@ -18,7 +31,7 @@ class Data(object):
         self.errors = errors
 
     def summary_statistic(self, z_model, model):
-
+        print(len(z_model), len(model))
         interp_model = interp1d(z_model, model)
 
         exponent = 0
