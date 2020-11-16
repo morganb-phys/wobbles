@@ -64,89 +64,6 @@ def sample_sag_orbit():
 
     return orbit_init_sag
 
-def run(run_index, Nreal, output_folder_name, VLA_data_path,
-        tabulated_potential, save_params_list, readout_step, parameter_priors,
-        phase_space_res):
-
-    init_arrays = True
-    count = 0
-
-    for j in range(0, Nreal):
-
-        samples = {}
-        for param_prior in parameter_priors:
-
-            param_name = param_prior[0]
-            prior_type = param_prior[1]
-            prior_args = param_prior[2]
-            positive_definite = param_prior[3]
-            if prior_type == 'g':
-                value = np.random.normal(*prior_args)
-            elif prior_type == 'u':
-                value = np.random.uniform(*prior_args)
-            elif prior_type == 'f':
-                value = prior_args
-            else:
-                raise Exception('param prior '+str(param_prior[0]) +' not valid.')
-            if positive_definite:
-
-                value = abs(value)
-            samples[param_name] = value
-
-        print(str(j)+' out of '+str(Nreal))
-
-        kde_instance = VLA_simulation_phasespaceKDE(VLA_data_path)
-
-        A, vz = single_iteration(samples, tabulated_potential, kde_instance, phase_space_res)
-        for param in save_params_list:
-            assert param in samples.keys()
-        new_params_sampled = [samples[param] for param in save_params_list]
-        new_params_sampled = np.array(new_params_sampled)
-
-        if init_arrays:
-            init_arrays = False
-            params_sampled = new_params_sampled
-            asymmetry = A
-            mean_vz = vz
-        else:
-            params_sampled = np.vstack((params_sampled, new_params_sampled))
-            asymmetry = np.vstack((asymmetry, A))
-            mean_vz = np.vstack((mean_vz, vz))
-
-        count += 1
-        if count < readout_step:
-            readout = False
-        else:
-            readout = True
-
-        if readout:
-
-            init_arrays = True
-            count = 0
-            with open(output_folder_name + 'asymmetry_' + str(run_index) + '.txt', 'a') as f:
-                string_to_write = ''
-                for row in range(0, asymmetry.shape[0]):
-                    for ai in asymmetry[row,:]:
-                        string_to_write += str(np.round(ai, 5)) + ' '
-                    string_to_write += '\n'
-                f.write(string_to_write)
-
-            with open(output_folder_name + 'meanvz_' + str(run_index) + '.txt', 'a') as f:
-                string_to_write = ''
-                for row in range(0, mean_vz.shape[0]):
-                    for vzi in mean_vz[row, :]:
-                        string_to_write += str(np.round(vzi, 5)) + ' '
-                    string_to_write += '\n'
-                f.write(string_to_write)
-
-            with open(output_folder_name + 'params_' + str(run_index) + '.txt', 'a') as f:
-                string_to_write = ''
-                for row in range(0, params_sampled.shape[0]):
-                    for param_val in params_sampled[row, :]:
-                        string_to_write += str(np.round(param_val, 5)) + ' '
-                    string_to_write += '\n'
-                f.write(string_to_write)
-
 def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res):
 
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
@@ -164,6 +81,10 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
 
     velocity_dispersion = [samples['velocity_dispersion_1']]
     component_amplitude = [samples['component_amplitude_1']]
+
+    # for sample in samples.keys():
+    #     print(sample, samples[sample])
+    # a=input('continue')
 
     if samples['velocity_dispersion_2'] is not None:
         velocity_dispersion.append(samples['velocity_dispersion_2'])

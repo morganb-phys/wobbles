@@ -32,7 +32,8 @@ class DistributionFunction(object):
         dF_list = []
 
         for norm, sigma in zip(normalization_list, velocity_dispersion_list):
-
+            if sigma == 0:
+                raise Exception('cannot specify a velocity dispersion == 0')
             f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
                                             density_scale)
             dF_list.append(f)
