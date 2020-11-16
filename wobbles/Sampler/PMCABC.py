@@ -125,7 +125,7 @@ class PMCABCSampler(MCMCBase):
         sim = Simulator(self, self.to_sample_list, self.priors_over_hood)
         sampler = PMCABC([sim], [self._distance_calc], backend, seed=1)
 
-        journal_filename = self.output_folder + 'output_' + jobID
+        journal_filename = self.output_folder + 'journal_' + jobID
 
         if os.path.exists(journal_filename):
             f = open(journal_filename, 'rb')

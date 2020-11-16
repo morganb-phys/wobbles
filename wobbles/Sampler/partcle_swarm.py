@@ -1,4 +1,5 @@
-import pyswarms
+from lenstronomy.Sampling.Samplers.pso import ParticleSwarmOptimizer
+from lenstronomy.Sampling.Pool.pool import choose_pool
 import numpy as np
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
@@ -37,49 +38,41 @@ class ParticleSwarmSampler(object):
         self._dim = len(self.priors_over_hood)
         _ = self.bounds
 
-    def run(self, n_particles=100, n_iterations=250, c1=0.5, c2=0.3, w=0.9, parallelize=False,
-            n_proc=8):
-
-        options = {'c1': c1, 'c2': c2, 'w': w}
-
-        self._model_data = []
-        # Call instance of PSO with bounds argument
-
-        optimizer = pyswarms.single.GlobalBestPSO(n_particles=n_particles,
-                                                  dimensions=self._dim,
-                                                  options=options,
-                                                  bounds=self.bounds)
+    def run(self, n_particles=100, n_iterations=250, c1=1.193, c2=1.193, mpi=False,
+            parallelize=False, n_proc=8, verbose=False):
 
         if parallelize:
-            cost, pos = optimizer.optimize(self._minimize_func, iters=n_iterations,
-                                           n_processes=n_proc)
+
+            pool = choose_pool(mpi=mpi, processes=n_proc, use_dill=True)
+
+            pso = ParticleSwarmOptimizer(self._minimize_func, self.bounds[0], self.bounds[1],
+                                            n_particles, pool=pool)
+
         else:
-            cost, pos = optimizer.optimize(self._minimize_func, iters=n_iterations)
+            pso = ParticleSwarmOptimizer(self._minimize_func, self.bounds[0], self.bounds[1],
+                      n_particles)
+
+        swarm, gbest = pso.optimize(max_iter=n_iterations, verbose=verbose, c1=c1, c2=c2)
 
         self._prior_set = False
 
-        return cost, pos, optimizer.swarm, self._model_data
+        return swarm, gbest
 
     def _minimize_func(self, parameters_sampled):
 
-        logL = []
-        for i in range(0, parameters_sampled.shape[0]):
-            samples_prior_list = self._set_params(parameters_sampled[i,:])
+        samples_prior_list = self._set_params(parameters_sampled)
 
-            samples = {}
-            for param_prior in samples_prior_list:
-                param_name, value = self.prior_class.draw(param_prior)
-                samples[param_name] = value
+        samples = {}
+        for param_prior in samples_prior_list:
+            param_name, value = self.prior_class.draw(param_prior)
+            samples[param_name] = value
 
-            asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
-            model_data = [asymmetry, mean_vz]
+        asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
+        model_data = [asymmetry, mean_vz]
 
-            loglike = self._distance_calc.logLike(self._observed_data, model_data)
-            logL.append(loglike)
+        loglike = self._distance_calc.logLike(self._observed_data, model_data)
 
-            self._model_data.append((asymmetry, mean_vz, loglike))
-
-        return np.absolute(logL)
+        return loglike
 
     @property
     def bounds(self):
