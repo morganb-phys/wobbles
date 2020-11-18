@@ -1,5 +1,5 @@
 from wobbles.workflow.forward_model import single_iteration
-from wobbles.Sampler.data import *
+from wobbles.Sampling.data import *
 from abcpy.continuousmodels import Uniform, Normal
 from abcpy.probabilisticmodels import InputConnector, ProbabilisticModel, Continuous
 import numpy as np
@@ -7,7 +7,7 @@ from copy import deepcopy
 from abcpy.inferences import PMCABC
 import os
 import pickle
-from wobbles.Sampler.base import Base
+from wobbles.Sampling.base import Base
 from abcpy.backends import BackendMPI, BackendDummy
 
 class Simulator(ProbabilisticModel, Continuous):

@@ -1,9 +1,9 @@
 import numpy as np
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
-from wobbles.Sampler.data import DistanceCalculator
+from wobbles.Sampling.data import DistanceCalculator
 from scipy.optimize import minimize
-from wobbles.Sampler.base import Base
+from wobbles.Sampling.base import Base
 
 class DownhillSimplex(Base):
 

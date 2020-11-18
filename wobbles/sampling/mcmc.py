@@ -1,10 +1,10 @@
 import emcee
 import numpy as np
-from wobbles.Sampler.data import DistanceCalculator
+from wobbles.Sampling.data import DistanceCalculator
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
 import pickle
-from wobbles.Sampler.base import Base
+from wobbles.Sampling.base import Base
 
 class MCMCSampler(Base):
 

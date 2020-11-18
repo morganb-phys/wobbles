@@ -1,7 +1,7 @@
-from wobbles.Sampler.PMCABC import PMCABCSampler
-from wobbles.Sampler.partcle_swarm import ParticleSwarmSampler
-from wobbles.Sampler.mcmc import MCMCSampler
-from wobbles.Sampler.downhill_simplex import DownhillSimplex
+from wobbles.Sampling.PMCABC import PMCABCSampler
+from wobbles.Sampling.partcle_swarm import ParticleSwarmSampler
+from wobbles.Sampling.mcmc import MCMCSampler
+from wobbles.Sampling.downhill_simplex import DownhillSimplex
 import numpy as np
 
 class OutputContainer(object):

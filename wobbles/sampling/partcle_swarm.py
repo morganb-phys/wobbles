@@ -1,8 +1,8 @@
-from wobbles.Sampler.pso_sampler import ParticleSwarmOptimizer
+from wobbles.Sampling.samplers.pso_sampler import ParticleSwarmOptimizer
 import numpy as np
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
-from wobbles.Sampler.data import DistanceCalculator
+from wobbles.Sampling.data import DistanceCalculator
 
 
 class ParticleSwarmSampler(object):
