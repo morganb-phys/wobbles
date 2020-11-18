@@ -1,6 +1,6 @@
 from wobbles.workflow.forward_model import single_iteration
 import numpy as np
-
+from time import time
 
 class RejectionABCSampler(object):
 
@@ -18,16 +18,25 @@ class RejectionABCSampler(object):
         self.pool = pool
         self.n_proc = n_proc
 
-    def run(self, save_output=True):
+    def run(self, save_output=True, verbose=False):
 
         init_arrays = True
         count = 0
         if self.pool is None:
+            print('running without multiproccessing... ')
             n_run = self.Nrealizations
+            readout_steps = self.readout_steps
+            if verbose:
+                print('running without multiproccessing... ')
+                print(str(n_run)+' iterations total')
         else:
             assert self.n_proc is not None, 'If running with multiprocessing must specify number ' \
                                             'of parallel processes'
             n_run = int(self.Nrealizations/self.n_proc)
+            readout_steps = int(self.readout_steps/self.n_proc)
+            if verbose:
+                print('running with multiproccessing... ')
+                print(str(n_run) + ' iterations total and '+str(self.n_proc)+' jobs per iteration')
 
         for j in range(0, n_run):
 
@@ -35,9 +44,18 @@ class RejectionABCSampler(object):
             _, _, save_params_list = self.prior_class.split_under_over_hood
 
             if self.pool is None:
+                t0 = time()
                 A, vz, new_params_sampled = self._run(parameter_priors, save_params_list)
+                dt = np.round(time() - t0, 2)
+                if verbose:
+                    print('sampling rate: '+str(dt)+' seconds per iteration')
+
             else:
+                t0 = time()
                 A, vz, new_params_sampled = self._run_pool(parameter_priors, save_params_list)
+                dt = np.round((time() - t0)/self.n_proc, 2)
+                if verbose:
+                    print('sampling rate: '+str(dt)+' seconds per iteration')
 
             if init_arrays:
                 init_arrays = False
@@ -50,7 +68,7 @@ class RejectionABCSampler(object):
                 mean_vz = np.vstack((mean_vz, vz))
 
             count += 1
-            if save_output and count < self.readout_steps:
+            if save_output and count < readout_steps:
                 readout = False
             else:
                 readout = True
