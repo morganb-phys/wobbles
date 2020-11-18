@@ -61,9 +61,9 @@ class PotentialExtension(object):
 
             for j, vval in enumerate(self.v_units_internal):
 
-                if zval < tol:
+                if np.abs(zval) < tol:
                     zval = zval + z_step * 0.01
-                if vval < tol:
+                if np.abs(vval) < tol:
                     vval = vval + v_step * 0.01
 
                 aAV = actionAngleVertical(0.1, 0.1, 0.1, zval, vval, pot=self.vertical_disk_potential_physical_off)
