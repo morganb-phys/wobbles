@@ -31,7 +31,7 @@ class Data(object):
         self.errors = errors
 
     def summary_statistic(self, z_model, model):
-        print(len(z_model), len(model))
+
         interp_model = interp1d(z_model, model)
 
         exponent = 0

@@ -4,10 +4,10 @@ from wobbles.Sampler.data import DistanceCalculator
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
 import pickle
-from wobbles.Sampler.base import MCMCBase
+from wobbles.Sampler.base import Base
 from multiprocessing import Pool
 
-class MCMCSampler(MCMCBase):
+class MCMCSampler(Base):
 
     def __init__(self, output_folder, args_sampler,
                  observed_data, data_uncertainties,

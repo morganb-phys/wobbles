@@ -38,18 +38,18 @@ class ParticleSwarmSampler(object):
         self._dim = len(self.priors_over_hood)
         _ = self.bounds
 
-    def run(self, n_particles=100, n_iterations=250, c1=1.193, c2=1.193, mpi=False,
-            parallelize=False, n_proc=8, verbose=False):
+    def run(self, n_particles=100, n_iterations=250, c1=1.193, c2=1.193,
+            parallelize=False, pool=None, verbose=False):
 
         if parallelize:
 
-            pool = choose_pool(mpi=mpi, processes=n_proc, use_dill=True)
+            assert pool is not None
 
-            pso = ParticleSwarmOptimizer(self._minimize_func, self.bounds[0], self.bounds[1],
+            pso = ParticleSwarmOptimizer(self.minimize_func, self.bounds[0], self.bounds[1],
                                             n_particles, pool=pool)
 
         else:
-            pso = ParticleSwarmOptimizer(self._minimize_func, self.bounds[0], self.bounds[1],
+            pso = ParticleSwarmOptimizer(self.minimize_func, self.bounds[0], self.bounds[1],
                       n_particles)
 
         swarm, gbest = pso.optimize(max_iter=n_iterations, verbose=verbose, c1=c1, c2=c2)
@@ -71,7 +71,7 @@ class ParticleSwarmSampler(object):
 
         return asymmetry, mean_vz
 
-    def _minimize_func(self, parameters_sampled):
+    def minimize_func(self, parameters_sampled):
 
         asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
 

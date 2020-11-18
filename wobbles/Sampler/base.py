@@ -2,7 +2,7 @@ import numpy as np
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
 
-class MCMCBase(object):
+class Base(object):
 
     def __init__(self, output_folder, args_sampler,
                  observed_data,

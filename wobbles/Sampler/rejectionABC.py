@@ -5,7 +5,7 @@ import numpy as np
 class RejectionABCSampler(object):
 
     def __init__(self, prior_class, output_folder, args_sampler, run_index, Nrealizations,
-                 readout_steps=25):
+                 readout_steps=25, pool=None, n_proc=None):
 
         # (self._tabpot, self._kde, self._phase_space_res) = args_sampler
         self._args_sampler = args_sampler
@@ -15,30 +15,29 @@ class RejectionABCSampler(object):
         self.Nrealizations = Nrealizations
         self.prior_class = prior_class
         self.readout_steps = readout_steps
+        self.pool = pool
+        self.n_proc = n_proc
 
     def run(self, save_output=True):
 
         init_arrays = True
         count = 0
+        if self.pool is None:
+            n_run = self.Nrealizations
+        else:
+            assert self.n_proc is not None, 'If running with multiprocessing must specify number ' \
+                                            'of parallel processes'
+            n_run = int(self.Nrealizations/self.n_proc)
 
-        parameter_priors = self.prior_class.param_prior
-        _, _, save_params_list = self.prior_class.split_under_over_hood
+        for j in range(0, n_run):
 
-        for j in range(0, self.Nrealizations):
+            parameter_priors = self.prior_class.param_prior
+            _, _, save_params_list = self.prior_class.split_under_over_hood
 
-            samples = {}
-            for param_prior in parameter_priors:
-
-                param_name, value = self.prior_class.draw(param_prior)
-                samples[param_name] = value
-
-            A, vz = single_iteration(samples, *self._args_sampler)
-
-            for param in save_params_list:
-                assert param in samples.keys()
-
-            new_params_sampled = [samples[param] for param in save_params_list]
-            new_params_sampled = np.array(new_params_sampled)
+            if self.pool is None:
+                A, vz, new_params_sampled = self._run(parameter_priors, save_params_list)
+            else:
+                A, vz, new_params_sampled = self._run_pool(parameter_priors, save_params_list)
 
             if init_arrays:
                 init_arrays = False
@@ -86,3 +85,56 @@ class RejectionABCSampler(object):
                             string_to_write += str(np.round(param_val, 5)) + ' '
                         string_to_write += '\n'
                     f.write(string_to_write)
+
+    def _run_pool(self, parameter_priors, save_params_list):
+
+        samples_list = []
+        new_params_sampled = np.empty(self.n_proc, len(save_params_list))
+
+        for i in range(0, self.n_proc):
+            samples = {}
+            for param_prior in parameter_priors:
+                param_name, value = self.prior_class.draw(param_prior)
+                samples[param_name] = value
+            samples_list.append(samples)
+
+            new_params = [samples[param] for param in save_params_list]
+            new_params_sampled[i, :] = np.array(new_params)
+
+        model_data = list(self.pool.map(self._func, samples_list))
+
+        A_shape = model_data[0][0].shape
+        vz_shape = model_data[0][1].shape
+        A, vz = np.empty(A_shape), np.empty(vz_shape)
+
+        for i, di in enumerate(model_data):
+            A[i, :] = model_data[i][0]
+            vz[i,:] = model_data[i][1]
+
+        return A, vz, new_params_sampled
+
+    def _func(self, x):
+
+        A, vz = single_iteration(x, *self._args_sampler)
+        return (A, vz)
+
+    def _run(self, parameter_priors, save_params_list):
+
+        samples = {}
+        for param_prior in parameter_priors:
+
+            param_name, value = self.prior_class.draw(param_prior)
+            samples[param_name] = value
+
+        for param in save_params_list:
+            assert param in samples.keys()
+
+        A, vz = single_iteration(samples, *self._args_sampler)
+
+        new_params_sampled = [samples[param] for param in save_params_list]
+        new_params_sampled = np.array(new_params_sampled)
+
+        return A, vz, new_params_sampled
+
+
+

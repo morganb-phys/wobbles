@@ -1,6 +1,7 @@
 from wobbles.Sampler.PMCABC import PMCABCSampler
 from wobbles.Sampler.partcle_swarm import ParticleSwarmSampler
 from wobbles.Sampler.mcmc import MCMCSampler
+from wobbles.Sampler.downhill_simplex import DownhillSimplex
 import numpy as np
 
 class OutputContainer(object):
@@ -66,6 +67,14 @@ class FittingSequence(object):
                 parameters = np.squeeze(out.get_accepted_parameters())
                 best_index = np.argmin(distances)
                 best_solution = parameters[best_index]
+
+            elif fit_type == 'AMOEBA':
+
+                sampler = DownhillSimplex(**self.kwargs_sampler)
+                sampler.set_prior(prior)
+                out = sampler.run(**kwargs)
+                output_list.append(['AMOEBA', out, sampler])
+                best_solution = out['x']
 
             else:
                 raise Exception('sampler type '+str(fit_type)+' not recognized')

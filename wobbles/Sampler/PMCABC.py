@@ -7,7 +7,7 @@ from copy import deepcopy
 from abcpy.inferences import PMCABC
 import os
 import pickle
-from wobbles.Sampler.base import MCMCBase
+from wobbles.Sampler.base import Base
 from abcpy.backends import BackendMPI, BackendDummy
 
 class Simulator(ProbabilisticModel, Continuous):
@@ -82,7 +82,7 @@ class Simulator(ProbabilisticModel, Continuous):
 
         return True
 
-class PMCABCSampler(MCMCBase):
+class PMCABCSampler(Base):
 
     def __init__(self, output_folder, args_sampler,
                  observed_data, data_uncertainties,
