@@ -32,8 +32,10 @@ class FittingSequence(object):
                 sampler = ParticleSwarmSampler(**self.kwargs_sampler)
                 sampler.set_prior(prior)
                 out = sampler.run(**kwargs)
-                output_list.append(['PSO', out, sampler])
-                best_solution = np.array(out[1])
+                best_solution = np.array(out[0])
+                best_chi2 = out[1]
+                swarm = out[2]
+                output_list.append(['PSO', (best_solution, best_chi2), swarm, sampler])
 
             elif fit_type == 'MCMC':
 
@@ -51,30 +53,32 @@ class FittingSequence(object):
                     kwargs['initial_pos'] = initial_pos
                     del kwargs['init_scale']
 
-                out = sampler.run(**kwargs)
-
-                output_list.append(['MCMC', out, sampler])
-                best_index = np.argmax(out.log_prob)
-                best_solution = out.coords[best_index]
+                chain = sampler.run(**kwargs)
+                best_index = np.argmax(chain.log_prob)
+                best_solution = chain.coords[best_index]
+                best_chi2 = -2 * sampler.log_probability(best_solution)
+                output_list.append(['MCMC', (best_solution, best_chi2), chain, sampler])
 
             elif fit_type == 'PMCABC':
 
                 sampler = PMCABCSampler(**self.kwargs_sampler)
                 sampler.set_prior(prior)
-                out = sampler.run(**kwargs)
-                output_list.append(['PMCABC', out, sampler])
+                journal = sampler.run(**kwargs)
                 distances = out.get_distances()
                 parameters = np.squeeze(out.get_accepted_parameters())
                 best_index = np.argmin(distances)
                 best_solution = parameters[best_index]
+                best_chi2 = sampler.minimize_func(best_solution)
+                output_list.append(['PMCABC', (best_solution, best_chi2), journal, sampler])
 
             elif fit_type == 'AMOEBA':
 
                 sampler = DownhillSimplex(**self.kwargs_sampler)
                 sampler.set_prior(prior)
                 out = sampler.run(**kwargs)
-                output_list.append(['AMOEBA', out, sampler])
                 best_solution = out['x']
+                best_stat = sampler.minimize_func(best_solution)
+                output_list.append(['AMOEBA', (best_solution, best_stat), out, sampler])
 
             else:
                 raise Exception('sampler type '+str(fit_type)+' not recognized')

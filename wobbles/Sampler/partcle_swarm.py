@@ -51,11 +51,11 @@ class ParticleSwarmSampler(object):
             pso = ParticleSwarmOptimizer(self.minimize_func, self.bounds[0], self.bounds[1],
                       n_particles)
 
-        swarm, gbest = pso.optimize(max_iter=n_iterations, verbose=verbose, c1=c1, c2=c2)
+        gbest, [chi2_list, pos_list, vel_list] = pso.optimize(max_iter=n_iterations, verbose=verbose, c1=c1, c2=c2)
 
         self._prior_set = False
 
-        return swarm, gbest
+        return (gbest, np.min(chi2_list), pso.swarm)
 
     def model_data_from_params(self, parameters_sampled):
 

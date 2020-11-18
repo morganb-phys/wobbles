@@ -109,6 +109,10 @@ class PMCABCSampler(Base):
         super(PMCABCSampler, self).__init__(output_folder, args_sampler, observed_data,
                  observed_data_z_eval)
 
+    def minimize_func(self, params):
+
+        return self._distance_calc.distance(self._observed_data, params)
+
     def run(self, jobID, n_sample, steps, epsilon_init,
             epsilon_percentile, save_output=True, parallelize=False):
 
