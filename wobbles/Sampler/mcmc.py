@@ -5,7 +5,6 @@ from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
 import pickle
 from wobbles.Sampler.base import Base
-from multiprocessing import Pool
 
 class MCMCSampler(Base):
 
@@ -33,20 +32,20 @@ class MCMCSampler(Base):
 
 
     def run(self, initial_pos, n_run, n_walkers_per_dim, save_output=True, progress=False,
-            parallelize=False, n_proc=8):
+            parallelize=False, pool=None):
 
         assert self._prior_set is True
 
         n_walkers = n_walkers_per_dim * self._dim
 
         if parallelize:
-            with Pool() as pool:
-                sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.log_probability, pool=pool)
-                state = sampler.run_mcmc(initial_pos, n_run, progress=progress);
+            assert pool is not None
+            sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.log_probability, pool=pool)
+            state = sampler.run_mcmc(initial_pos, n_run, progress=progress)
             #pool.close()
         else:
             sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.log_probability)
-            state = sampler.run_mcmc(initial_pos, n_run, progress=progress);
+            state = sampler.run_mcmc(initial_pos, n_run, progress=progress)
 
 
         if save_output:

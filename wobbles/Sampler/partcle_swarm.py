@@ -1,5 +1,4 @@
-from lenstronomy.Sampling.Samplers.pso import ParticleSwarmOptimizer
-from lenstronomy.Sampling.Pool.pool import choose_pool
+from wobbles.Sampler.pso_sampler import ParticleSwarmOptimizer
 import numpy as np
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
@@ -119,3 +118,5 @@ class ParticleSwarmSampler(object):
             new = [[param_name, 'f', params_sampled[j], False]]
             new_params += new
         return new_params
+
+

@@ -5,7 +5,7 @@ from time import time
 class RejectionABCSampler(object):
 
     def __init__(self, prior_class, output_folder, args_sampler, run_index, Nrealizations,
-                 readout_steps=25, pool=None, n_proc=None):
+                 readout_steps=25, parallel=False, n_proc=None):
 
         # (self._tabpot, self._kde, self._phase_space_res) = args_sampler
         self._args_sampler = args_sampler
@@ -15,47 +15,49 @@ class RejectionABCSampler(object):
         self.Nrealizations = Nrealizations
         self.prior_class = prior_class
         self.readout_steps = readout_steps
-        self.pool = pool
+        self.parallel = parallel
         self.n_proc = n_proc
 
-    def run(self, save_output=True, verbose=False):
+    def run(self, save_output=True, pool=None, verbose=False):
 
         init_arrays = True
         count = 0
-        if self.pool is None:
+        if self.parallel:
+            assert self.n_proc is not None, 'If running with multiprocessing must specify number ' \
+                                            'of parallel processes'
+            n_run = int(self.Nrealizations / self.n_proc)
+            readout_steps = int(self.readout_steps / self.n_proc)
+            if verbose:
+                print('running with multiproccessing... ')
+                print(str(n_run) + ' iterations total and ' + str(self.n_proc) + ' jobs per iteration')
+
+        else:
             print('running without multiproccessing... ')
             n_run = self.Nrealizations
             readout_steps = self.readout_steps
             if verbose:
                 print('running without multiproccessing... ')
-                print(str(n_run)+' iterations total')
-        else:
-            assert self.n_proc is not None, 'If running with multiprocessing must specify number ' \
-                                            'of parallel processes'
-            n_run = int(self.Nrealizations/self.n_proc)
-            readout_steps = int(self.readout_steps/self.n_proc)
-            if verbose:
-                print('running with multiproccessing... ')
-                print(str(n_run) + ' iterations total and '+str(self.n_proc)+' jobs per iteration')
+                print(str(n_run) + ' iterations total')
 
         for j in range(0, n_run):
 
             parameter_priors = self.prior_class.param_prior
             _, _, save_params_list = self.prior_class.split_under_over_hood
 
-            if self.pool is None:
+            if self.parallel:
+
+                t0 = time()
+                A, vz, new_params_sampled = self._run_pool(parameter_priors, save_params_list, pool)
+                dt = np.round((time() - t0) / self.n_proc, 2)
+                if verbose:
+                    print('sampling rate: ' + str(dt) + ' seconds per iteration')
+
+            else:
                 t0 = time()
                 A, vz, new_params_sampled = self._run(parameter_priors, save_params_list)
                 dt = np.round(time() - t0, 2)
                 if verbose:
-                    print('sampling rate: '+str(dt)+' seconds per iteration')
-
-            else:
-                t0 = time()
-                A, vz, new_params_sampled = self._run_pool(parameter_priors, save_params_list)
-                dt = np.round((time() - t0)/self.n_proc, 2)
-                if verbose:
-                    print('sampling rate: '+str(dt)+' seconds per iteration')
+                    print('sampling rate: ' + str(dt) + ' seconds per iteration')
 
             if init_arrays:
                 init_arrays = False
@@ -72,9 +74,6 @@ class RejectionABCSampler(object):
                 readout = False
             else:
                 readout = True
-
-            if save_output is False:
-                return asymmetry, mean_vz, params_sampled
 
             if readout and save_output:
 
@@ -104,10 +103,14 @@ class RejectionABCSampler(object):
                         string_to_write += '\n'
                     f.write(string_to_write)
 
-    def _run_pool(self, parameter_priors, save_params_list):
+        if save_output is False:
+            return asymmetry, mean_vz, params_sampled
+
+    def _run_pool(self, parameter_priors, save_params_list, pool):
 
         samples_list = []
-        new_params_sampled = np.empty(self.n_proc, len(save_params_list))
+
+        new_params_sampled = np.empty((self.n_proc, len(save_params_list)))
 
         for i in range(0, self.n_proc):
             samples = {}
@@ -119,11 +122,11 @@ class RejectionABCSampler(object):
             new_params = [samples[param] for param in save_params_list]
             new_params_sampled[i, :] = np.array(new_params)
 
-        model_data = list(self.pool.map(self._func, samples_list))
+        model_data = list(pool.map(self._func, samples_list))
 
-        A_shape = model_data[0][0].shape
-        vz_shape = model_data[0][1].shape
-        A, vz = np.empty(A_shape), np.empty(vz_shape)
+        A_len = len(model_data[0][0])
+        vz_len = len(model_data[0][1])
+        A, vz = np.empty((self.n_proc, A_len)), np.empty((self.n_proc, vz_len))
 
         for i, di in enumerate(model_data):
             A[i, :] = model_data[i][0]
