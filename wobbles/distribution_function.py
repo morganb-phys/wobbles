@@ -32,7 +32,8 @@ class DistributionFunction(object):
         dF_list = []
 
         for norm, sigma in zip(normalization_list, velocity_dispersion_list):
-
+            if sigma == 0:
+                raise Exception('cannot specify a velocity dispersion == 0')
             f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
                                             density_scale)
             dF_list.append(f)
@@ -133,10 +134,10 @@ class _SingleDistributionFunction(object):
         interp = interp1d(self.z + self.z_fit, self.density, fill_value='extrapolate', kind='cubic')
 
         zmin_max = np.max(self.z)
-        z_len= len(self.z)
-        
-        zplus = np.linspace(0, zmin_max, z_len)
-        zminus = np.linspace(0, -zmin_max, z_len)
+
+        zplus = np.linspace(0, zmin_max, len(self._vdom))
+        zminus = np.linspace(0, -zmin_max, len(self._vdom))
+
         rho_plus = interp(zplus)
         rho_minus = interp(zminus)
         A = (rho_plus - rho_minus) / (rho_plus + rho_minus)

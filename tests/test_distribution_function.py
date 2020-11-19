@@ -4,14 +4,17 @@ import numpy as np
 from galpy import util
 import pickle
 from wobbles.distribution_function import DistributionFunction, _SingleDistributionFunction
+import os
 
 class TestDistributionFunction(object):
 
     def setup(self):
 
-        f = open('./MW14pot_100', "rb")
-        self.potential_extension_local = pickle.load(f)
+        path = os.getcwd()
+        f = open(path + '/tests/MW14pot_100', "rb")
+        self.potential_extension_global = pickle.load(f)
         f.close()
+        self.potential_extension_local = self.potential_extension_global
 
         self.J = self.potential_extension_local.action
         self.nu = self.potential_extension_local.vertical_freq
@@ -65,13 +68,5 @@ class TestDistributionFunction(object):
         npt.assert_almost_equal(max_rho2, max_rho2_combined)
         npt.assert_almost_equal(max_rho_combined, max_rho1 + max_rho2)
 
-
-#
-# t = TestDistributionFunction()
-# t.setup()
-# t.test_density()
-# t.test_velocity()
-
-# comment this out if you uncomment the lines above
 if __name__ == '__main__':
    pytest.main()
