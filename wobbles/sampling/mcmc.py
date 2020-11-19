@@ -1,10 +1,10 @@
 import emcee
 import numpy as np
-from wobbles.Sampling.data import DistanceCalculator
+from wobbles.sampling.data import DistanceCalculator
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
 import pickle
-from wobbles.Sampling.base import Base
+from wobbles.sampling.base import Base
 
 class MCMCSampler(Base):
 
@@ -44,6 +44,7 @@ class MCMCSampler(Base):
             state = sampler.run_mcmc(initial_pos, n_run, progress=progress)
             #pool.close()
         else:
+
             sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.log_probability)
             state = sampler.run_mcmc(initial_pos, n_run, progress=progress)
 
@@ -62,7 +63,7 @@ class MCMCSampler(Base):
         log_prior_weight = self.log_prior(parameters_sampled)
 
         if not np.isfinite(log_prior_weight):
-            return -np.inf
+            return -1e+9
 
         asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
 

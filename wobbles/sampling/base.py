@@ -48,7 +48,7 @@ class Base(object):
         for i, param in enumerate(parameters_sampled):
 
             if param < bounds[0][i] or param > bounds[1][i]:
-                return np.nan
+                return -np.inf
             else:
 
                 weight += bounds[2][i](param)

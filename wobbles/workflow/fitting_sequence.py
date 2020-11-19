@@ -1,14 +1,15 @@
-from wobbles.Sampling.PMCABC import PMCABCSampler
-from wobbles.Sampling.partcle_swarm import ParticleSwarmSampler
-from wobbles.Sampling.mcmc import MCMCSampler
-from wobbles.Sampling.downhill_simplex import DownhillSimplex
+from wobbles.sampling.PMCABC import PMCABCSampler
+from wobbles.sampling.partcle_swarm import ParticleSwarmSampler
+from wobbles.sampling.mcmc import MCMCSampler
+from wobbles.sampling.downhill_simplex import DownhillSimplex
 import numpy as np
 
 class OutputContainer(object):
 
-    def __init__(self, output):
+    def __init__(self, output, kwargs_sampler):
 
         self.output = output
+        self.kwargs_sampler = kwargs_sampler
 
 class FittingSequence(object):
 
@@ -16,7 +17,30 @@ class FittingSequence(object):
 
         self.kwargs_sampler = kwargs_sampler
 
-    def fitting_sequence(self, sequence_list):
+    @classmethod
+    def from_saved_output(cls, output_container):
+
+        """
+        Restart a new fitting sequence from output stored in Output Container
+        :param output_container: instance of ^
+        :return:
+        """
+
+        kwargs_sampler = output_container.kwargs_sampler
+        return FittingSequence(kwargs_sampler)
+
+    @staticmethod
+    def mcmc_initial_pos_from_best(params_best, kwargs):
+
+        init_scale = kwargs['init_scale']
+        shape = (len(params_best) * kwargs['n_walkers_per_dim'], len(params_best))
+        sigmas = np.absolute(init_scale * params_best)
+        initial_pos = np.empty(shape)
+        for i in range(0, initial_pos.shape[0]):
+            initial_pos[i, :] = np.random.normal(params_best, sigmas)
+        return initial_pos
+
+    def fitting_sequence(self, sequence_list, verbose=False):
 
         output_list = []
         best_solution = None
@@ -26,6 +50,9 @@ class FittingSequence(object):
             fit_type = iteration[0]
             kwargs = iteration[1]
             prior = iteration[2]
+
+            if verbose:
+                print('running '+fit_type+'... ')
 
             if fit_type == 'PSO':
 
@@ -42,15 +69,14 @@ class FittingSequence(object):
                 sampler = MCMCSampler(**self.kwargs_sampler)
                 sampler.set_prior(prior)
                 if best_solution is None:
-                    assert 'initial_pos' in kwargs.keys()
-                else:
-                    shape = (len(best_solution) * kwargs['n_walkers_per_dim'], len(best_solution))
-                    sigmas = np.absolute(kwargs['init_scale'] * best_solution)
-                    initial_pos = np.empty(shape)
+                    assert 'initial_position' in kwargs.keys()
+                    kwargs['initial_pos'] = self.mcmc_initial_pos_from_best(kwargs['initial_position'],
+                                                                            kwargs)
+                    del kwargs['init_scale']
+                    del kwargs['initial_position']
 
-                    for i in range(0, initial_pos.shape[0]):
-                        initial_pos[i,:] = np.random.normal(best_solution, sigmas)
-                    kwargs['initial_pos'] = initial_pos
+                else:
+                    kwargs['initial_pos'] = self.mcmc_initial_pos_from_best(best_solution, kwargs)
                     del kwargs['init_scale']
 
                 chain = sampler.run(**kwargs)
@@ -82,5 +108,9 @@ class FittingSequence(object):
 
             else:
                 raise Exception('sampler type '+str(fit_type)+' not recognized')
+
+            if verbose:
+                print('found best result: ', (best_solution, output_list[-1][1][1]))
+                print('\n')
 
         return output_list

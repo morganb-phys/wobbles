@@ -1,5 +1,5 @@
 from wobbles.workflow.forward_model import single_iteration
-from wobbles.Sampling.data import *
+from wobbles.sampling.data import *
 from abcpy.continuousmodels import Uniform, Normal
 from abcpy.probabilisticmodels import InputConnector, ProbabilisticModel, Continuous
 import numpy as np
@@ -7,7 +7,7 @@ from copy import deepcopy
 from abcpy.inferences import PMCABC
 import os
 import pickle
-from wobbles.Sampling.base import Base
+from wobbles.sampling.base import Base
 from abcpy.backends import BackendMPI, BackendDummy
 
 class Simulator(ProbabilisticModel, Continuous):
@@ -28,8 +28,8 @@ class Simulator(ProbabilisticModel, Continuous):
         phase_space_res = self.mcmc_class._phase_space_res
 
         if not np.isfinite(log_prior):
-            asymmetry = 10000 * np.ones(phase_space_res)
-            mean_vz = 10000 * np.ones_like(phase_space_res)
+            asymmetry = 100000 * np.ones(phase_space_res)
+            mean_vz = 100000 * np.ones_like(phase_space_res)
 
         else:
             samples_prior_list = self.mcmc_class._set_params(params_sampled)
