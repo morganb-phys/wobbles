@@ -91,3 +91,27 @@ class PriorBase(object):
             self._param_names_sampled_over_hood = param_names_sampled_over_hood
 
         return self._priors_under_hood, self._priors_over_hood, self._param_names_sampled_over_hood
+
+class UniformPrior(object):
+
+    def __init__(self, low, high):
+
+        self.low, self.high = low, high
+
+    def loglike(self, param):
+
+        if param < self.low:
+            return -np.inf
+        elif param > self.high:
+            return -np.inf
+        else:
+            return 0.
+
+class GaussianPrior(object):
+
+    def __init__(self, mean, sigma):
+        assert sigma > 0
+        self.mean, self.sigma = mean, sigma
+
+    def loglike(self, param):
+        return -0.5 * (param - self.mean) ** 2 / self.sigma ** 2

@@ -31,7 +31,7 @@ class DownhillSimplex(Base):
 
     def minimize_func(self, params):
 
-        log_prior_weight = self.log_prior(params)
+        log_prior_weight = self.prior_loglike(params)
 
         if not np.isfinite(log_prior_weight):
             return np.inf

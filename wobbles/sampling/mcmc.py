@@ -13,9 +13,6 @@ class MCMCSampler(Base):
                  observed_data_z_eval, sample_inds_1=None, sample_inds_2=None,
                  ignore_asymmetry=False, ignore_vz=False, **kwargs):
 
-        # (self._tabpot, self._kde, self._phase_space_res) = args_sampler
-
-        self.output_folder = output_folder
 
         self._phase_space_res = args_sampler[-1]
         self._model_domain_1 = np.linspace(0, 2, self._phase_space_res)
@@ -30,6 +27,23 @@ class MCMCSampler(Base):
         super(MCMCSampler, self).__init__(output_folder, args_sampler,
                                           observed_data, observed_data_z_eval)
 
+    def loglike(self, parameters_sampled):
+
+        # check if sample should be rejected based on the prior
+        loglike_prior = self.prior_loglike(parameters_sampled)
+
+        if not np.isfinite(loglike_prior):
+            return -1e+9
+
+        asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
+
+        model_data = [asymmetry, mean_vz]
+
+        loglike_model = self._distance_calc.logLike(self._observed_data, model_data)
+        print(parameters_sampled)
+        print(loglike_model, loglike_prior)
+
+        return loglike_model + loglike_prior
 
     def run(self, initial_pos, n_run, n_walkers_per_dim, save_output=True, progress=False,
             parallelize=False, pool=None):
@@ -40,12 +54,12 @@ class MCMCSampler(Base):
 
         if parallelize:
             assert pool is not None
-            sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.log_probability, pool=pool)
+            sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.loglike, pool=pool)
             state = sampler.run_mcmc(initial_pos, n_run, progress=progress)
             #pool.close()
         else:
 
-            sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.log_probability)
+            sampler = emcee.EnsembleSampler(n_walkers, self._dim, self.loglike)
             state = sampler.run_mcmc(initial_pos, n_run, progress=progress)
 
 
@@ -56,19 +70,3 @@ class MCMCSampler(Base):
             f.close()
 
         return state
-
-    def log_probability(self, parameters_sampled):
-
-        # check if sample should be rejected based on the prior
-        log_prior_weight = self.log_prior(parameters_sampled)
-
-        if not np.isfinite(log_prior_weight):
-            return -1e+9
-
-        asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
-
-        model_data = [asymmetry, mean_vz]
-
-        loglike = self._distance_calc.logLike(self._observed_data, model_data)
-
-        return loglike

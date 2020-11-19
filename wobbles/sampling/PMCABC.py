@@ -24,7 +24,7 @@ class Simulator(ProbabilisticModel, Continuous):
 
     def forward_simulate(self, params_sampled, k=1, rng=np.random.RandomState()):
 
-        log_prior = self.mcmc_class.log_prior(params_sampled)
+        log_prior = self.mcmc_class.prior_loglike(params_sampled)
         phase_space_res = self.mcmc_class._phase_space_res
 
         if not np.isfinite(log_prior):
@@ -32,7 +32,8 @@ class Simulator(ProbabilisticModel, Continuous):
             mean_vz = 100000 * np.ones_like(phase_space_res)
 
         else:
-            samples_prior_list = self.mcmc_class._set_params(params_sampled)
+
+            samples_prior_list = self.mcmc_class.set_params(params_sampled)
 
             samples = {}
             for param_prior in samples_prior_list:

@@ -1,6 +1,7 @@
 import numpy as np
 from copy import deepcopy
 from wobbles.workflow.forward_model import single_iteration
+from wobbles.sampling.prior_manager import UniformPrior, GaussianPrior
 
 class Base(object):
 
@@ -20,7 +21,7 @@ class Base(object):
 
     def model_data_from_params(self, parameters_sampled):
 
-        samples_prior_list = self._set_params(parameters_sampled)
+        samples_prior_list = self.set_params(parameters_sampled)
 
         samples = {}
         for param_prior in samples_prior_list:
@@ -39,52 +40,50 @@ class Base(object):
         self.prior_class = prior_class
         self._dim = len(self.priors_over_hood)
 
-    def log_prior(self, parameters_sampled):
+    def prior_loglike(self, parameters_sampled):
 
-        bounds = self.bounds
+        prior_functions = self.prior_functions
 
-        weight = 0.
+        assert len(prior_functions) == len(parameters_sampled)
 
-        for i, param in enumerate(parameters_sampled):
+        log_like = 0.
 
-            if param < bounds[0][i] or param > bounds[1][i]:
-                return -np.inf
-            else:
+        for (param, func) in zip(parameters_sampled, prior_functions):
 
-                weight += bounds[2][i](param)
+            log_like += func.loglike(param)
 
-        return weight
+        return log_like
 
     @property
-    def bounds(self):
+    def prior_functions(self):
 
-        if not hasattr(self, '_bounds'):
+        if not hasattr(self, '_prior_functions'):
             _, priors_over_hood, _ = self.prior_class.split_under_over_hood
-            bound_low, bound_high = [], []
-            log_weights = []
+            func_list = []
+
             for param_prior in priors_over_hood:
 
                 prior_type = param_prior[1]
                 prior_args = param_prior[2]
+
                 if prior_type == 'u':
-                    bound_low.append(prior_args[0])
-                    bound_high.append(prior_args[1])
-                    w = lambda x: 0.
-                    log_weights.append(w)
+
+                    func = UniformPrior(prior_args[0], prior_args[1])
+
                 elif prior_type == 'g':
-                    bound_low.append(-np.inf)
-                    bound_high.append(np.inf)
-                    w = lambda x: -0.5 * (x - prior_args[0]) ** 2 / prior_args[1] ** 2
-                    log_weights.append(w)
+
+                    func = GaussianPrior(prior_args[0], prior_args[1])
+
                 else:
                     raise Exception('prior type ' + str(prior_type) + ' not recognized')
 
-            bound_low, bound_high = np.array(bound_low), np.array(bound_high)
-            self._bounds = (bound_low, bound_high, log_weights)
+                func_list.append(func)
 
-        return self._bounds
+            self._prior_functions = func_list
 
-    def _set_params(self, params_sampled):
+        return self._prior_functions
+
+    def set_params(self, params_sampled):
 
         new_params = deepcopy(self.priors_under_hood)
 

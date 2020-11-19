@@ -76,13 +76,14 @@ class FittingSequence(object):
                     del kwargs['initial_position']
 
                 else:
+                    assert 'init_scale' in kwargs.keys()
                     kwargs['initial_pos'] = self.mcmc_initial_pos_from_best(best_solution, kwargs)
                     del kwargs['init_scale']
 
                 chain = sampler.run(**kwargs)
                 best_index = np.argmax(chain.log_prob)
                 best_solution = chain.coords[best_index]
-                best_chi2 = -2 * sampler.log_probability(best_solution)
+                best_chi2 = -2 * sampler.loglike(best_solution)
                 output_list.append(['MCMC', (best_solution, best_chi2), chain, sampler])
 
             elif fit_type == 'PMCABC':
