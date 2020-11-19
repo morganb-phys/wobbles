@@ -40,9 +40,7 @@ class MCMCSampler(Base):
         model_data = [asymmetry, mean_vz]
 
         loglike_model = self._distance_calc.logLike(self._observed_data, model_data)
-        print(parameters_sampled)
-        print(loglike_model, loglike_prior)
-
+        
         return loglike_model + loglike_prior
 
     def run(self, initial_pos, n_run, n_walkers_per_dim, save_output=True, progress=False,
