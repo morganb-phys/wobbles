@@ -131,12 +131,12 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
 
         ####################################### Set subhalo properties #######################################
         halo_masses_1 = sample_mass_function(n_nearby_1, samples['log_slope'], mlow, mhigh)
-        #halo_concentrations_nfw = sample_concentration_nfw(samples['c8'], halo_masses_1)
-        halo_concentrations_hernquist = sample_concentration_herquist(samples['c8'], halo_masses_1)
+        #halo_concentrations_nfw = sample_concentration_nfw(halo_masses_1, samples['c8'])
+        halo_concentrations_hernquist = sample_concentration_herquist(halo_masses_1, samples['c8'])
         for m, c in zip(halo_masses_1, halo_concentrations_hernquist):
             #halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
-            halo_potentials_1.append(HernquistPotential(HernquistPotential(amp=0.5*m * apu.solMass,
-                                                                           a=c * apu.kpc)))
+            pot = HernquistPotential(amp=0.5*m * apu.solMass, a=c * apu.kpc)
+            halo_potentials_1.append(pot)
         #####################################################################################################
 
     ####################################### Integrate orbit of Sag. #################################
@@ -175,6 +175,9 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
                                     component_amplitude, verbose=False)
 
     asymmetry, mean_vz = dF.A, dF.mean_v_relative
+    # import matplotlib.pyplot as plt
+    # plt.plot(asymmetry)
+    # plt.show()
     return asymmetry, mean_vz
 
 
