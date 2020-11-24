@@ -1,6 +1,56 @@
 from wobbles.workflow.forward_model import single_iteration
+from wobbles.sampling.data import Data
 import numpy as np
 from time import time
+
+class SimulationContainer(object):
+
+    def __init__(self, z_domain, simulated_asymmetry, simulated_mean_vz, simulated_params):
+
+        self.simulated_asymmetry = simulated_asymmetry
+        self.simulated_mean_vz = simulated_mean_vz
+        self.simulated_params = simulated_params
+        self.z_domain = z_domain
+
+    def _likelihood(self, z_observed, observed, simulated, uncertainties, model_percent_uncertainty):
+
+        data = Data(z_observed, observed, uncertainties)
+
+        N = simulated.shape[0]
+        n_points = simulated.shape[1]
+        chi_square = np.empty(N)
+
+        for i in range(0, N):
+
+            if model_percent_uncertainty is None:
+                model_uncertainties = np.zeros(n_points)
+            else:
+                model_uncertainties = model_percent_uncertainty * simulated[i, :]
+
+            x = simulated[i, :] * (1 + model_uncertainties)
+            chi_square[i] = data.chi_square(self.z_domain, x)
+
+        return chi_square
+
+    def likelihood_asymmetry(self, z_observed, observed_asymmetry, uncertainties, model_percent_uncertainty=None):
+
+        chi_square = self._likelihood(z_observed, observed_asymmetry, self.simulated_asymmetry, uncertainties,
+                                      model_percent_uncertainty)
+
+        self.chi_square_asymmetry = chi_square
+
+        return chi_square
+
+    def likelihood_meanvz(self, z_observed, observed_meanvz, uncertainties, model_percent_uncertainty=None):
+
+        chi_square = self._likelihood(z_observed, observed_meanvz, self.simulated_mean_vz, uncertainties,
+                                      model_percent_uncertainty)
+
+        self.chi_square_meanvz = chi_square
+
+        return chi_square
+
+
 
 class RejectionABCSampler(object):
 
@@ -9,7 +59,7 @@ class RejectionABCSampler(object):
 
         # (self._tabpot, self._kde, self._phase_space_res) = args_sampler
         self._args_sampler = args_sampler
-
+        self._phase_space_dim = args_sampler[-1]
         self.run_index = run_index
         self.output_folder = output_folder
         self.Nrealizations = Nrealizations
@@ -113,10 +163,8 @@ class RejectionABCSampler(object):
         new_params_sampled = np.empty((self.n_proc, len(save_params_list)))
 
         for i in range(0, self.n_proc):
-            samples = {}
-            for param_prior in parameter_priors:
-                param_name, value = self.prior_class.draw(param_prior)
-                samples[param_name] = value
+
+            samples = self.prior_class.draw(parameter_priors)
             samples_list.append(samples)
 
             new_params = [samples[param] for param in save_params_list]
@@ -129,6 +177,11 @@ class RejectionABCSampler(object):
         A, vz = np.empty((self.n_proc, A_len)), np.empty((self.n_proc, vz_len))
 
         for i, di in enumerate(model_data):
+
+            if model_data[i][0] is None or model_data[i][1] is None:
+                model_data[i][0] = np.ones(len(self._phase_space_dim)) * 1000
+                model_data[i][1] = np.ones(len(self._phase_space_dim)) * 1000
+
             A[i, :] = model_data[i][0]
             vz[i,:] = model_data[i][1]
 
@@ -141,16 +194,16 @@ class RejectionABCSampler(object):
 
     def _run(self, parameter_priors, save_params_list):
 
-        samples = {}
-        for param_prior in parameter_priors:
-
-            param_name, value = self.prior_class.draw(param_prior)
-            samples[param_name] = value
+        samples = self.prior_class.draw(parameter_priors)
 
         for param in save_params_list:
             assert param in samples.keys()
 
         A, vz = single_iteration(samples, *self._args_sampler)
+
+        if A is None or vz is None:
+            A = np.ones(len(self._phase_space_dim)) * 1000
+            vz = np.ones(len(self._phase_space_dim)) * 1000
 
         new_params_sampled = [samples[param] for param in save_params_list]
         new_params_sampled = np.array(new_params_sampled)

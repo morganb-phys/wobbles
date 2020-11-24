@@ -31,6 +31,9 @@ class MCMCSampler(Base):
 
         # check if sample should be rejected based on the prior
         loglike_prior = self.prior_loglike(parameters_sampled)
+        # also, evaluate the prior probability; Emcee samples from a uniform pdf and implements
+        # the prior via importance weighting, in contrast to PMCABC which implements the prior directly
+        # through the sampling. So for Emcee we need to keep track of the chi^2 penalty from the prior
 
         if not np.isfinite(loglike_prior):
             return -1e+9
@@ -40,7 +43,7 @@ class MCMCSampler(Base):
         model_data = [asymmetry, mean_vz]
 
         loglike_model = self._distance_calc.logLike(self._observed_data, model_data)
-        
+
         return loglike_model + loglike_prior
 
     def run(self, initial_pos, n_run, n_walkers_per_dim, save_output=True, progress=False,

@@ -23,10 +23,7 @@ class Base(object):
 
         samples_prior_list = self.set_params(parameters_sampled)
 
-        samples = {}
-        for param_prior in samples_prior_list:
-            param_name, value = self.prior_class.draw(param_prior)
-            samples[param_name] = value
+        samples = self.prior_class.draw(samples_prior_list)
 
         asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
 

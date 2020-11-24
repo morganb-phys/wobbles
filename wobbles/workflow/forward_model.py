@@ -82,7 +82,7 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
                 'velocity_dispersion_1', 'velocity_dispersion_2', 'velocity_dispersion_3',
                 'component_amplitude_1', 'component_amplitude_2', 'component_amplitude_3',
                  'orbit_ra', 'orbit_dec', 'orbit_z', 'orbit_pm_ra', 'orbit_pm_dec', 'orbit_vlos',
-                'gal_norm']
+                'gal_norm', 'c8']
 
     for kw in keywords:
         assert kw in samples.keys(), 'did not find '+str(kw)
@@ -131,9 +131,12 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
 
         ####################################### Set subhalo properties #######################################
         halo_masses_1 = sample_mass_function(n_nearby_1, samples['log_slope'], mlow, mhigh)
-        halo_concentrations_1 = sample_concentration(halo_masses_1)
-        for m, c in zip(halo_masses_1, halo_concentrations_1):
-            halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
+        #halo_concentrations_nfw = sample_concentration_nfw(samples['c8'], halo_masses_1)
+        halo_concentrations_hernquist = sample_concentration_herquist(samples['c8'], halo_masses_1)
+        for m, c in zip(halo_masses_1, halo_concentrations_hernquist):
+            #halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
+            halo_potentials_1.append(HernquistPotential(HernquistPotential(amp=0.5*m * apu.solMass,
+                                                                           a=c * apu.kpc)))
         #####################################################################################################
 
     ####################################### Integrate orbit of Sag. #################################

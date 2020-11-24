@@ -18,9 +18,15 @@ def sample_mass_function(n, a, ml, mh):
 
     return invert_CDF(u)
 
-def sample_concentration(m):
+def sample_concentration_nfw(m, norm=17.5):
     # close to the CDM mass concentration relation
-    return 17 * (m / 10 ** 8) ** -0.06
+    return norm * (m / 10 ** 8) ** -0.06
+
+def sample_concentration_herquist(m, norm=17.5):
+
+    a = 1.05 * (m / 10 ** 8) ** 0.5
+    rescale = 17.5/norm
+    return rescale * a
 
 def sample_hernquist_a(m):
 
