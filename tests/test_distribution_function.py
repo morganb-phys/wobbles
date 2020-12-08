@@ -11,7 +11,7 @@ class TestDistributionFunction(object):
     def setup(self):
 
         path = os.getcwd()
-        f = open(path + '/tests/MW14pot_100', "rb")
+        f = open(path + '/MW14pot_100', "rb")
         self.potential_extension_global = pickle.load(f)
         f.close()
         self.potential_extension_local = self.potential_extension_global
@@ -34,8 +34,9 @@ class TestDistributionFunction(object):
         J = self.potential_extension_local.action
         nu = self.potential_extension_local.vertical_freq
 
+        kwargs_interp = {'fill_value': 'extrapolate', 'kind': 'linear'}
         df = _SingleDistributionFunction(rho_midplane, vdis, J, nu, self.v_domain, self.z_domain, self.length_scale,
-                 self.velocity_scale, self.density_scale)
+                 self.velocity_scale, self.density_scale, kwargs_interp)
 
         max_rho = max(df.density)
         npt.assert_almost_equal(max_rho, rho_midplane_physical, decimal=3)
@@ -49,12 +50,14 @@ class TestDistributionFunction(object):
         J = self.potential_extension_local.action
         nu = self.potential_extension_local.vertical_freq
 
+        kwargs_interp = {'fill_value': 'extrapolate', 'kind': 'cubic'}
         df1 = _SingleDistributionFunction(rho_midplane[0], vdis[0], J, nu, self.v_domain, self.z_domain, self.length_scale,
-                                         self.velocity_scale, self.density_scale)
+                                         self.velocity_scale, self.density_scale, kwargs_interp)
+        kwargs_interp = {'fill_value': 'extrapolate', 'kind': 'cubic'}
         df2 = _SingleDistributionFunction(rho_midplane[1], vdis[1], J, nu, self.v_domain, self.z_domain, self.length_scale,
-                                         self.velocity_scale, self.density_scale)
+                                         self.velocity_scale, self.density_scale, kwargs_interp)
         df3 = DistributionFunction(np.sum(rho_midplane), component_amplitude, vdis, J, nu, self.v_domain, self.z_domain, self.length_scale,
-                 self.velocity_scale, self.density_scale)
+                 self.velocity_scale, self.density_scale, fill_value_interp='extrapolate', interp_kind='cubic')
 
         max_rho1 = max(df1.density)
         max_rho2 = max(df2.density)
@@ -67,6 +70,29 @@ class TestDistributionFunction(object):
         npt.assert_almost_equal(max_rho1, max_rho1_combined)
         npt.assert_almost_equal(max_rho2, max_rho2_combined)
         npt.assert_almost_equal(max_rho_combined, max_rho1 + max_rho2)
+
+    def test_with_perturbation(self):
+
+        J = self.potential_extension_local.action
+        nu = self.potential_extension_local.vertical_freq
+
+        component_amplitude = [0.6, 0.4]
+        rho_midplane_value = 0.1
+        rho_midplane_physical = [rho_midplane_value * component_amplitude[0],
+                                 rho_midplane_value * component_amplitude[1]]
+        rho_midplane = [rho_midplane_physical[0] / self.density_scale, rho_midplane_physical[1] / self.density_scale]
+        vdis = [20.5 / self.velocity_scale, 4 / self.velocity_scale]
+
+        delta_J = np.loadtxt(os.getcwd() + '/delta_J_test.txt')
+
+        df3 = DistributionFunction(np.sum(rho_midplane), component_amplitude, vdis, J + delta_J, nu,
+                                         self.v_domain, self.z_domain,
+                                         self.length_scale,
+                                         self.velocity_scale, self.density_scale, fill_value_interp='extrapolate',
+                                         interp_kind='linear')
+
+        npt.assert_array_less(np.absolute(df3.A), 1)
+
 
 if __name__ == '__main__':
    pytest.main()

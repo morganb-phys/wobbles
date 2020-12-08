@@ -6,7 +6,7 @@ from scipy.interpolate import interp1d
 class DistributionFunction(object):
 
     def __init__(self, rho_midplane, normalization_list, velocity_dispersion_list, J, nu, v_domain, z_domain, length_scale,
-                 velocity_scale, density_scale):
+                 velocity_scale, density_scale, fill_value_interp='extrapolate', interp_kind='cubic', z_ref=None):
 
         """
         Constructs a distribution function for the disk as a sum of quasi-isothermal distribution functions
@@ -31,15 +31,21 @@ class DistributionFunction(object):
 
         dF_list = []
 
+        kwargs_interp = {'fill_value': fill_value_interp, 'kind': interp_kind}
+
         for norm, sigma in zip(normalization_list, velocity_dispersion_list):
             if sigma == 0:
                 raise Exception('cannot specify a velocity dispersion == 0')
             f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
-                                            density_scale)
+                                            density_scale, kwargs_interp, z_ref=z_ref)
             dF_list.append(f)
 
-        self.dF_list = dF_list
+            # this will either be computed from the first component of the model or fixed to the value of
+            # z_sun given to the class
+            z_sun = f.z_ref
 
+        self.dF_list = dF_list
+        self.z_ref = z_ref
         self.z = self.dF_list[0].z
         self.v = self.dF_list[0].v
         self.weights = np.array(normalization_list) / np.sum(normalization_list)
@@ -50,6 +56,11 @@ class DistributionFunction(object):
         for df, norm in zip(self.dF_list, self.weights):
             v_moment += norm * df.velocity_moment(n)
         return v_moment
+
+    def A_at_coord(self, z):
+
+        a = self.A
+
 
     @property
     def A(self):
@@ -91,12 +102,13 @@ class DistributionFunction(object):
 class _SingleDistributionFunction(object):
 
     def __init__(self, rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale,
-                 velocity_scale, density_scale):
+                 velocity_scale, density_scale, kwargs_interp, z_ref=None):
         """ exp(J * nu / sigma^2)"""
         self.rho0 = rho_midplane
         self.sigma0 = sigma
         self.J = J
         self.nu = nu
+        self._kwargs_interp = kwargs_interp
 
         self._vdom = v_domain
         self._zdom = z_domain
@@ -112,8 +124,11 @@ class _SingleDistributionFunction(object):
         idx = int(len(rho)/2)
         self._norm_density = self.density_scale * rho_midplane / rho[idx]
 
-        x = fit_sec_squared(self.density, self.z)
-        self.z_fit = x[1]
+        if z_ref is None:
+            x = fit_sec_squared(self.density, self.z)
+            self.z_ref = x[1]
+        else:
+            self.z_ref = z_ref
 
     @property
     def normalization(self):
@@ -131,12 +146,13 @@ class _SingleDistributionFunction(object):
     @property
     def A(self):
 
-        interp = interp1d(self.z + self.z_fit, self.density, fill_value='extrapolate', kind='cubic')
+        interp = interp1d(self.z + self.z_ref, self.density,
+                          **self._kwargs_interp)
 
         zmin_max = np.max(self.z)
 
-        zplus = np.linspace(0, zmin_max, len(self._vdom))
-        zminus = np.linspace(0, -zmin_max, len(self._vdom))
+        zplus = np.linspace(0, zmin_max, int(len(self._vdom)))
+        zminus = np.linspace(0, -zmin_max, int(len(self._vdom)))
 
         rho_plus = interp(zplus)
         rho_minus = interp(zminus)
