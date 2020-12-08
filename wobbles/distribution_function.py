@@ -57,10 +57,10 @@ class DistributionFunction(object):
             v_moment += norm * df.velocity_moment(n)
         return v_moment
 
-    def A_at_coord(self, z):
+    def density_at_z(self, z):
 
-        a = self.A
-
+        rho_interp = self._interpolated_density
+        return rho_interp(z)
 
     @property
     def A(self):
@@ -97,6 +97,15 @@ class DistributionFunction(object):
 
         mean_v = self.mean_v
         return mean_v - np.mean(mean_v)
+
+    @property
+    def _interpolated_density(self):
+
+        if not hasattr(self, '_rho_interp'):
+
+            self._rho_interp = interp1d(self.z - self.z_ref, self.density)
+
+        return self._rho_interp
 
 
 class _SingleDistributionFunction(object):
