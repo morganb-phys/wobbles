@@ -153,17 +153,17 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
 
     perturber_orbits = sag_orbit + subhalo_orbit_list + dwarf_orbits
     perturber_potentials = sag_potential + halo_potentials + dwarf_galaxy_potentials
-    print(perturber_potentials)
+
     dF, delta_J, force = compute_df(disc, time_internal_units,
                                     perturber_orbits, perturber_potentials, velocity_dispersion,
                                     component_amplitude, verbose=False)
 
     asymmetry, mean_vz, density = dF.A, dF.mean_v_relative, dF.density
-    import matplotlib.pyplot as plt
-    plt.plot(asymmetry)
-    plt.show()
-    print(samples)
-    a=input('continue')
+    # import matplotlib.pyplot as plt
+    # plt.plot(asymmetry)
+    # plt.show()
+    # print(samples)
+    # a=input('continue')
     return asymmetry, mean_vz, density
 
 # param_prior = []
