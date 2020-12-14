@@ -62,14 +62,14 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
 
     try:
         potential_local = tabulated_potential.evaluate(samples['nfw_norm'],
-                                                   samples['disk_norm'],
-                                                       samples['disk_scale_height'])
+                                                   samples['disk_norm'])
+
     except:
         # prior sampled out of bounds
         # print('out of bounds: ', samples['nfw_norm'], samples['disk_norm'])
-        return None, None
+        return None, None, None
 
-    keywords = ['nfw_norm', 'disk_norm', 'disk_scale_height',
+    keywords = ['nfw_norm', 'disk_norm',
                 'log_sag_mass_DM', 'sag_mass2light',
                 'f_sub', 'log_slope', 'm_host',
                 'velocity_dispersion_1', 'velocity_dispersion_2', 'velocity_dispersion_3',

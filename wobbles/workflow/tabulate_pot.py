@@ -63,7 +63,7 @@ class TabulatedPotential3D(object):
         index = self._min_index(param_1_value, param_2_value, param_3_value)
         return self.potential_extension_list[index]
 
-class TabulatedPotential2D(object):
+class TabulatedPotential(object):
 
     def __init__(self, potential_extension_list, param_1_values, param_2_values):
 
@@ -73,6 +73,7 @@ class TabulatedPotential2D(object):
         :param param_1_values: the parameter iterated over first in a double for loop
         :param param_2_values: the parameter iterated over second in a double for loop
         """
+
         self.potential_extension_list = potential_extension_list
 
         p1, p2 = np.meshgrid(param_2_values, param_1_values)

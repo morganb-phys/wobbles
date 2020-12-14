@@ -180,6 +180,7 @@ class RejectionABCSampler(object):
             new_params = [samples[param] for param in save_params_list]
             new_params_sampled[i, :] = np.array(new_params)
 
+
         model_data = list(pool.map(self._func, samples_list))
 
         A_len = len(model_data[0][0])
@@ -204,6 +205,7 @@ class RejectionABCSampler(object):
     def _func(self, x):
 
         A, vz, rho = single_iteration(x, *self._args_sampler, **self._kwargs_sampler)
+
         return (A, vz, rho)
 
     def _run(self, parameter_priors, save_params_list):
