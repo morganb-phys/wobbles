@@ -37,13 +37,14 @@ class DistributionFunction(object):
             if sigma == 0:
                 raise Exception('cannot specify a velocity dispersion == 0')
             f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
-                                            density_scale, kwargs_interp, z_ref=z_ref)
+                                            density_scale, z_ref=z_ref)
             dF_list.append(f)
 
             # this will either be computed from the first component of the model or fixed to the value of
             # z_sun given to the class
-            z_sun = f.z_ref
+            z_ref = f.z_ref
 
+        self._kwargs_interp = kwargs_interp
         self.dF_list = dF_list
         self.z_ref = z_ref
         self.z = self.dF_list[0].z
@@ -65,9 +66,20 @@ class DistributionFunction(object):
     @property
     def A(self):
 
-        A = 0
-        for df, norm in zip(self.dF_list, self.weights):
-            A += df.A * norm
+        log_density = np.log10(self.density)
+        interp_log = interp1d(self.z, log_density,
+                          **self._kwargs_interp)
+
+        zmin_max = np.max(self.z)
+
+        zplus = np.linspace(0, zmin_max, int(len(self.v)))
+        zminus = np.linspace(0, -zmin_max, int(len(self.v)))
+
+        log_rho_plus = interp_log(zplus)
+        log_rho_minus = interp_log(zminus)
+
+        rho_plus, rho_minus = 10 ** log_rho_plus, 10 ** log_rho_minus
+        A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
         return A
 
     @property
@@ -111,13 +123,12 @@ class DistributionFunction(object):
 class _SingleDistributionFunction(object):
 
     def __init__(self, rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale,
-                 velocity_scale, density_scale, kwargs_interp, z_ref=None):
+                 velocity_scale, density_scale, z_ref=None):
         """ exp(J * nu / sigma^2)"""
         self.rho0 = rho_midplane
         self.sigma0 = sigma
         self.J = J
         self.nu = nu
-        self._kwargs_interp = kwargs_interp
 
         self._vdom = v_domain
         self._zdom = z_domain
@@ -151,22 +162,6 @@ class _SingleDistributionFunction(object):
         v_integrand = (self._vdom[None, :] * self.velocity_scale) ** n
 
         return simps(f0 * v_integrand, axis=1) / self.normalization
-
-    @property
-    def A(self):
-
-        interp = interp1d(self.z + self.z_ref, self.density,
-                          **self._kwargs_interp)
-
-        zmin_max = np.max(self.z)
-
-        zplus = np.linspace(0, zmin_max, int(len(self._vdom)))
-        zminus = np.linspace(0, -zmin_max, int(len(self._vdom)))
-
-        rho_plus = interp(zplus)
-        rho_minus = interp(zminus)
-        A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
-        return A
 
     @property
     def f0(self):

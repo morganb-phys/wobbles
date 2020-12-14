@@ -1,6 +1,53 @@
 import numpy as np
 import galpy
 import astropy.units as apu
+from galpy.potential import NFWPotential, HernquistPotential
+
+def render_subhalos(mlow, mhigh, f_sub, log_slope, m_host, via_lactea_kde,
+                    c8, galactic_potential, global_potential_extension,
+                    time_Gyr, mdef='HERNQUIST', dr_max=8, pass_through_disk_limit=3):
+
+    N_halos = normalization(f_sub, log_slope, m_host, mlow, mhigh)
+
+    sample_orbits_0 = generate_sample_orbits_kde(
+        N_halos, via_lactea_kde, galactic_potential, time_Gyr)
+    # print('generated ' + str(N_halos) + ' halos... ')
+    rs_host, r_core = 25, 25.
+    args, func = (rs_host, r_core), core_nfw_pdf
+    inds_keep = filter_orbits_NFW(sample_orbits_0, time_Gyr, func, args)
+    sample_orbits_1 = [sample_orbits_0[idx] for idx in inds_keep]
+
+    nearby_orbits_1_inds, _ = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr,
+                                       global_potential_extension, R_solar=8,
+                                       dr_max=dr_max, pass_through_disk_limit=pass_through_disk_limit,
+                                                            tdep=True)
+
+    nearby_orbits_1 = [sample_orbits_0[idx] for idx in nearby_orbits_1_inds]
+    n_nearby_1 = len(nearby_orbits_1)
+
+    halo_masses_1 = sample_mass_function(n_nearby_1, log_slope, mlow, mhigh)
+
+    halo_potentials = []
+
+    if mdef == 'HERNQUIST':
+        concentrations = sample_concentration_herquist(halo_masses_1, c8)
+        for m, c in zip(halo_masses_1, concentrations):
+            pot = HernquistPotential(amp=0.5 * m * apu.solMass, a=c * apu.kpc)
+            halo_potentials.append(pot)
+
+    elif mdef == 'NFW':
+        concentrations = sample_concentration_nfw(halo_masses_1, c8)
+        for m, c in zip(halo_masses_1, concentrations):
+            pot = NFWPotential(mvir=m / 10 ** 12, conc=c)
+            halo_potentials.append(pot)
+
+    subhalo_orbit_list = []
+    for orb in nearby_orbits_1:
+        orb.turn_physical_off()
+        subhalo_orbit_list.append(orb)
+
+    return subhalo_orbit_list, halo_potentials
+
 
 def normalization(f, log_slope, m_host, mlow, mhigh):
     denom = mhigh ** (2 + log_slope) - mlow ** (2 + log_slope)
