@@ -44,7 +44,7 @@ class Simulator(ProbabilisticModel, Continuous):
             # sample remaining parameters under the hood
             samples = self.mcmc_class.prior_class.draw(samples_prior_list)
 
-            asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
+            asymmetry, mean_vz, density = single_iteration(samples, *self._args_sampler)
 
             if asymmetry is None or mean_vz is None:
                 # actually any array dim > 2 would work here

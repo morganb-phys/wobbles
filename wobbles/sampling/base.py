@@ -25,9 +25,9 @@ class Base(object):
 
         samples = self.prior_class.draw(samples_prior_list)
 
-        asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
+        asymmetry, mean_vz, density = single_iteration(samples, *self._args_sampler)
 
-        return asymmetry, mean_vz
+        return asymmetry, mean_vz, density
 
     def set_prior(self, prior_class):
 

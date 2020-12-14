@@ -1,6 +1,6 @@
 from wobbles.workflow.compute_distribution_function import compute_df
 from wobbles.workflow.integrate_single_orbit import integrate_orbit
-from wobbles.workflow.generate_perturbing_subhalos import *
+from wobbles.workflow.subhalos_and_dwarfs import *
 from galpy.potential.mwpotentials import PowerSphericalPotentialwCutoff, MiyamotoNagaiPotential
 from wobbles.disc import Disc
 import os
@@ -9,16 +9,8 @@ import numpy as np
 import galpy
 from galpy.potential import NFWPotential, HernquistPotential
 from wobbles.potential_extension import PotentialExtension
-
-import pickle
+from galpy.orbit.Orbits import Orbit
 from scipy.stats.kde import gaussian_kde
-import sys
-#
-# f = open('./saved_potentials/MW14pot_100', "rb")
-# potential_global = pickle.load(f)
-# f.close()
-#
-# galactic_potential = potential_global.galactic_potential
 
 t_orbit = -1.64  # Gyr
 N_tsteps = 1200
@@ -64,19 +56,20 @@ def sample_sag_orbit():
 
     return orbit_init_sag
 
-def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res):
+def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res, **kwargs):
 
     # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
 
     try:
         potential_local = tabulated_potential.evaluate(samples['nfw_norm'],
-                                                   samples['disk_norm'])
+                                                   samples['disk_norm'],
+                                                       samples['disk_scale_height'])
     except:
         # prior sampled out of bounds
         # print('out of bounds: ', samples['nfw_norm'], samples['disk_norm'])
         return None, None
 
-    keywords = ['nfw_norm', 'disk_norm',
+    keywords = ['nfw_norm', 'disk_norm', 'disk_scale_height',
                 'log_sag_mass_DM', 'sag_mass2light',
                 'f_sub', 'log_slope', 'm_host',
                 'velocity_dispersion_1', 'velocity_dispersion_2', 'velocity_dispersion_3',
@@ -90,54 +83,46 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
     velocity_dispersion = [samples['velocity_dispersion_1']]
     component_amplitude = [samples['component_amplitude_1']]
 
-    # for sample in samples.keys():
-    #     print(sample, samples[sample])
-    # a=input('continue')
-
     if samples['velocity_dispersion_2'] is not None:
         velocity_dispersion.append(samples['velocity_dispersion_2'])
-        component_amplitude.append(samples['component_amplitude_2'])
-        if samples['velocity_dispersion_3'] is not None:
-            velocity_dispersion.append(samples['velocity_dispersion_3'])
-            component_amplitude.append(samples['component_amplitude_3'])
+        component_amplitude_2 = 1 - component_amplitude[0]
+        component_amplitude.append(component_amplitude_2)
+
     assert len(velocity_dispersion) == len(component_amplitude)
+    assert np.sum(component_amplitude) == 1
 
     galactic_potential = sample_galactic_potential(samples['gal_norm'])
 
     potential_global = PotentialExtension(galactic_potential, 2, 120, phase_space_res,
                                           compute_action_angle=False)
 
-    mlow, mhigh = 5 * 10 ** 6, 10 ** 9
-    N_halos = normalization(samples['f_sub'], samples['log_slope'], samples['m_host'], mlow, mhigh)
+    subhalo_orbit_list, halo_potentials = [], []
+    if samples['f_sub'] > 0:
+        mlow, mhigh = kwargs['mlow'], kwargs['mhigh']
+        print('creating subhalos... ')
+        subhalo_orbit_list, halo_potentials = render_subhalos(mlow, mhigh, samples['f_sub'],
+                                                              samples['log_slope'], samples['m_host'],
+                                                              kde_instance, samples['c8'], galactic_potential, potential_global,
+                                                              time_Gyr, mdef='HERNQUIST', dr_max=8,
+                                                              pass_through_disk_limit=3)
 
-    nearby_orbits_1 = []
-    halo_potentials_1 = []
-    halo_orbit_list_physical_off_1 = []
-    if samples['f_sub'] is not None and samples['f_sub'] > 0:
-        ####################################### Generate subhalo orbits #######################################
-        sample_orbits_0 = generate_sample_orbits_kde(N_halos, kde_instance, galactic_potential, time_Gyr)
-        #print('generated ' + str(N_halos) + ' halos... ')
-        rs_host, r_core = 30, 30.
-        args, func = (rs_host, r_core), core_nfw_pdf
-        inds_keep = filter_orbits_NFW(sample_orbits_0, time_Gyr, func, args)
-        sample_orbits_1 = [sample_orbits_0[idx] for idx in inds_keep]
-        dr_max = 8  # kpc
-        nearby_orbits_1_inds, _ = passed_near_solar_neighorhood(sample_orbits_1, time_Gyr, potential_global, R_solar=8,
-                                                         dr_max=dr_max, pass_through_disk_limit=3, tdep=True)
-        nearby_orbits_1 = [sample_orbits_0[idx] for idx in nearby_orbits_1_inds]
-        n_nearby_1 = len(nearby_orbits_1)
-        #print('kept ' + str(n_nearby_1) + ' halos... ')
-        ############################################################################################################
+    dwarf_orbits, dwarf_galaxy_potentials = [], []
+    if 'include_dwarfs' in kwargs.keys() and kwargs['include_dwarfs']:
+        o = Orbit.from_name('MW satellite galaxies')
+        names = o.name
+        kept_names = []
+        dwarf_orbits = []
 
-        ####################################### Set subhalo properties #######################################
-        halo_masses_1 = sample_mass_function(n_nearby_1, samples['log_slope'], mlow, mhigh)
-        #halo_concentrations_nfw = sample_concentration_nfw(halo_masses_1, samples['c8'])
-        halo_concentrations_hernquist = sample_concentration_herquist(halo_masses_1, samples['c8'])
-        for m, c in zip(halo_masses_1, halo_concentrations_hernquist):
-            #halo_potentials_1.append(NFWPotential(mvir=m / 10 ** 12, conc=c))
-            pot = HernquistPotential(amp=0.5*m * apu.solMass, a=c * apu.kpc)
-            halo_potentials_1.append(pot)
-        #####################################################################################################
+        dwarf_masses, dwarf_names = dwarf_galaxies(names)
+
+        for i, name in enumerate(dwarf_names):
+            o = Orbit.from_name(name)
+            if o.r() < kwargs['r_min_dwarfs'] and name != 'Sgr':
+                o.integrate(time_Gyr, potential_global.galactic_potential)
+                dwarf_orbits += [o]
+                kept_names.append(name)
+        dwarf_galaxy_potentials, _ = dwarf_galaxies(kept_names, include_no_data=True,
+                                                    log_mass_mean=8, log_mass_sigma=0.5)
 
     ####################################### Integrate orbit of Sag. #################################
     orbit_init_sag = [samples['orbit_ra'] * apu.deg, samples['orbit_dec'] * apu.deg,
@@ -146,9 +131,7 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
                       samples['orbit_vlos'] * apu.km / apu.s]
     sag_orbit_phsical_off = integrate_orbit(orbit_init_sag, galactic_potential, time_Gyr)
     sag_orbit = [sag_orbit_phsical_off]
-    for orb in nearby_orbits_1:
-        orb.turn_physical_off()
-        halo_orbit_list_physical_off_1.append(orb)
+
     #######################################################################################################
 
     ####################################### Set Sag. properties ########################################
@@ -168,18 +151,20 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
     disc = Disc(potential_local, potential_global)
     time_internal_units = sag_orbit_phsical_off.time()
 
-    perturber_orbits = sag_orbit + halo_orbit_list_physical_off_1
-    perturber_potentials = sag_potential + halo_potentials_1
+    perturber_orbits = sag_orbit + subhalo_orbit_list + dwarf_orbits
+    perturber_potentials = sag_potential + halo_potentials + dwarf_galaxy_potentials
+    print(perturber_potentials)
     dF, delta_J, force = compute_df(disc, time_internal_units,
                                     perturber_orbits, perturber_potentials, velocity_dispersion,
                                     component_amplitude, verbose=False)
 
-    asymmetry, mean_vz = dF.A, dF.mean_v_relative
-    # import matplotlib.pyplot as plt
-    # plt.plot(asymmetry)
-    # plt.show()
-    return asymmetry, mean_vz
-
+    asymmetry, mean_vz, density = dF.A, dF.mean_v_relative, dF.density
+    import matplotlib.pyplot as plt
+    plt.plot(asymmetry)
+    plt.show()
+    print(samples)
+    a=input('continue')
+    return asymmetry, mean_vz, density
 
 # param_prior = []
 # param_prior += [['nfw_norm', 'u', [0.15, 0.45], False]]

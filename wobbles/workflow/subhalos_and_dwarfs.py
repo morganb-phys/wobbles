@@ -3,6 +3,42 @@ import galpy
 import astropy.units as apu
 from galpy.potential import NFWPotential, HernquistPotential
 
+
+def dwarf_galaxies(names, include_no_data=True,
+                   log_mass_mean=8., log_mass_sigma=0.5):
+
+    # these from Errani et al. 2018
+    dwarfs = {'Fornax': 8.9, 'LeoI': 9.3, 'Sculptor': 9.3, 'LeoII': 8.5, 'Sextans': 8.5, 'Carina': 8.6,
+               'UrsaMinor': 8.9, 'Draco': 9.5, 'CanesVenaticiI': 8.5, 'CraterII': 7., 'LeoT': 9.8, 'Hercules': 7.1,
+               'BootesI': 6.4, 'LeoIV': 7.2, 'UrsaMajorI': 8.5, 'UrsaMajorII': 9.1,
+              'CanesVenaticiII': 8.7, 'ComaBerenices': 8.6,
+               'BootesII': 10.4, 'Willman1': 10.4, 'Segue2': 9., 'Segue1': 9.8, 'LeoV': 7.5}
+
+    dwarf_masses = []
+    dwarf_names = []
+
+    for name in names:
+        if name in dwarfs.keys():
+            dwarf_masses.append(dwarfs[name])
+            dwarf_names.append(name)
+        else:
+            if include_no_data:
+                logm = np.random.normal(log_mass_mean, log_mass_sigma)
+                dwarf_masses.append(logm)
+                dwarf_names.append(name)
+            else:
+                print('excluing dwarf '+name)
+
+    dwarf_potentials = []
+    for logm in dwarf_masses:
+
+        m = 10 ** logm
+        c = sample_concentration_herquist(m, 17.5)
+        pot = HernquistPotential(amp=0.5 * m * apu.solMass, a=c * apu.kpc)
+        dwarf_potentials.append(pot)
+
+    return dwarf_potentials, dwarf_names
+
 def render_subhalos(mlow, mhigh, f_sub, log_slope, m_host, via_lactea_kde,
                     c8, galactic_potential, global_potential_extension,
                     time_Gyr, mdef='HERNQUIST', dr_max=8, pass_through_disk_limit=3):
@@ -31,6 +67,7 @@ def render_subhalos(mlow, mhigh, f_sub, log_slope, m_host, via_lactea_kde,
 
     if mdef == 'HERNQUIST':
         concentrations = sample_concentration_herquist(halo_masses_1, c8)
+
         for m, c in zip(halo_masses_1, concentrations):
             pot = HernquistPotential(amp=0.5 * m * apu.solMass, a=c * apu.kpc)
             halo_potentials.append(pot)
@@ -49,11 +86,38 @@ def render_subhalos(mlow, mhigh, f_sub, log_slope, m_host, via_lactea_kde,
     return subhalo_orbit_list, halo_potentials
 
 
+def fsub_transform(f_sub_6_10, log_slope, mL, mH):
+
+    mH_ref = 10**10
+    mL_ref = 10**6
+    mean_6_10 = mH_ref ** (2 + log_slope) - mL_ref ** (2 + log_slope)
+    mean_mL_mH = mH ** (2 + log_slope) - mL ** (2 + log_slope)
+    return f_sub_6_10 * mean_mL_mH / mean_6_10
+
 def normalization(f, log_slope, m_host, mlow, mhigh):
-    denom = mhigh ** (2 + log_slope) - mlow ** (2 + log_slope)
-    norm = (2 + log_slope) * m_host * f / denom
-    N_halos = norm * (mhigh ** (1 + log_slope) - mlow ** (1 + log_slope)) / (1 + log_slope)
-    return np.random.poisson(N_halos)
+
+    """
+    Returns the number of subhalos between mass mlow and mhigh sammpled from a
+    power law mass function with logarithmic slope log_slope.
+    The normalization is determined by f, which is the mass fraction in substructure
+    between 10^6 and 10^10.
+
+    :param f: mass function normalization, the mass fraction in subhalos between 10^6 and 10^10
+    :param log_slope: logarithmic slope of the mass function
+    :param m_host: host halo mass
+    :param mlow: low mass end of rendered subhalos
+    :param mhigh: high mass end of rendered subhalos
+    :return: number of halos
+    """
+    mH_ref = 10 ** 10
+    mL_ref = 10 ** 6
+
+    first_moment = mhigh ** (1 + log_slope) - mlow ** (1 + log_slope)
+    second_moment = mH_ref ** (2 + log_slope) - mL_ref ** (2 + log_slope)
+    a0 = f * (2 + log_slope) * m_host / second_moment
+    n = a0 * first_moment / (1 + log_slope)
+
+    return np.random.poisson(n)
 
 def sample_mass_function(n, a, ml, mh):
     # samples from a mass function dN/dm propto m^log_slope

@@ -36,7 +36,7 @@ class DownhillSimplex(Base):
         if not np.isfinite(log_prior_weight):
             return np.inf
 
-        asymmetry, mean_vz = self.model_data_from_params(params)
+        asymmetry, mean_vz, density = self.model_data_from_params(params)
         model_data = [asymmetry, mean_vz]
         stat = self._distance_calc.summary_statistic(self._observed_data, model_data)
         return stat
