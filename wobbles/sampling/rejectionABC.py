@@ -150,7 +150,7 @@ class RejectionABCSampler(object):
                 with open(self.output_folder + 'density_' + str(self.run_index) + '.txt', 'a') as f:
                     string_to_write = ''
                     for row in range(0, rho.shape[0]):
-                        for rhoi in density[row, :]:
+                        for rhoi in rho[row, :]:
                             string_to_write += str(np.round(rhoi, 5)) + ' '
                         string_to_write += '\n'
                     f.write(string_to_write)
