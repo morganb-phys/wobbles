@@ -2,7 +2,7 @@ import pytest
 import numpy.testing as npt
 from galpy.potential import NFWPotential, MiyamotoNagaiPotential, PowerSphericalPotentialwCutoff
 from wobbles.potential_extension import PotentialExtension
-from wobbles.workflow.tabulate_pot import TabulatedPotential2D, TabulatedPotential3D
+from wobbles.workflow.tabulate_pot import TabulatedPotential, TabulatedPotential3D
 
 class TestTabulatePotential2D(object):
 
@@ -26,7 +26,7 @@ class TestTabulatePotential2D(object):
         self.nfw_norm = nfw_norm
         self.pot_list = pot_list
 
-        self.tabulated_potential = TabulatedPotential2D(self.pot_list, self.nfw_norm, self.disk_norm)
+        self.tabulated_potential = TabulatedPotential(self.pot_list, self.nfw_norm, self.disk_norm)
 
     def test_tabulated_potential(self):
 

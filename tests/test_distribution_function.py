@@ -11,7 +11,7 @@ class TestDistributionFunction(object):
     def setup(self):
 
         path = os.getcwd()
-        f = open(path + '/MW14pot_100', "rb")
+        f = open(path + '/tests/MW14pot_100', "rb")
         self.potential_extension_global = pickle.load(f)
         f.close()
         self.potential_extension_local = self.potential_extension_global
@@ -83,7 +83,7 @@ class TestDistributionFunction(object):
         rho_midplane = [rho_midplane_physical[0] / self.density_scale, rho_midplane_physical[1] / self.density_scale]
         vdis = [20.5 / self.velocity_scale, 4 / self.velocity_scale]
 
-        delta_J = np.loadtxt(os.getcwd() + '/delta_J_test.txt')
+        delta_J = np.loadtxt(os.getcwd() + '/tests/delta_J_test.txt')
 
         df3 = DistributionFunction(np.sum(rho_midplane), component_amplitude, vdis, J + delta_J, nu,
                                          self.v_domain, self.z_domain,
