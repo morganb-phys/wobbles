@@ -10,12 +10,12 @@ from galpy.orbit import Orbit
 from scipy.integrate import simps, cumtrapz
 from galpy.util import bovy_plot
 import matplotlib.animation as animation
-from IPython.display import HTML
+#from IPython.display import HTML
 from scipy.optimize import minimize
 from scipy.interpolate import interp1d
 from galpy.potential import evaluatezforces,evaluateRforces, turn_physical_off, verticalfreq,evaluatelinearPotentials
 from galpy.util.bovy_conversion import dens_in_msolpc3
-import tqdm
+#import tqdm
 from scipy.interpolate import interp1d
 
 class Disc():
