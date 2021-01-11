@@ -6,6 +6,8 @@ import numpy as np
 
 class PotentialExtension(object):
 
+    valid_potential = True
+
     def __init__(self, galactic_potential, z_min_max_kpc, vz_min_max_kmsec, phase_space_N, R_over_R0_eval=1.,
                  velocity_dispersion_local=20.5, compute_action_angle=True):
 
@@ -30,13 +32,15 @@ class PotentialExtension(object):
 
         self.R_over_R0_eval = R_over_R0_eval
         self._velocity_dispersion_local = velocity_dispersion_local
-        self.vertical_disk_potential = [galpy.potential.toVerticalPotential(galactic_potential, self.R_over_R0_eval)]
+        self.vertical_disk_potential = [galpy.potential.toVerticalPotential(galactic_potential, self.R_over_R0_eval,
+                                                                            phi=0.)]
 
         self.z_units_internal, self.v_units_internal, galactic_potential_physical_off, self.units = self._coordinate_system(z_min_max_kpc,
                                                                               vz_min_max_kmsec, phase_space_N, galactic_potential)
 
         self.galactic_potential_physical_off = galactic_potential_physical_off
-        self.vertical_disk_potential_physical_off = [galpy.potential.toVerticalPotential(galactic_potential_physical_off, self.R_over_R0_eval)]
+        self.vertical_disk_potential_physical_off = [galpy.potential.toVerticalPotential(galactic_potential_physical_off,
+                                                                                         self.R_over_R0_eval, phi=0.)]
 
         if compute_action_angle:
             self.action, self.angle = self.action_angle()
@@ -108,7 +112,7 @@ class PotentialExtension(object):
         :return: the circular velocity evaluated at R_over_R0 in internal units.
         """
 
-        rho_midplane = galpy.potential.evaluateDensities(self.galactic_potential, self.R_over_R0_eval, 0.)
+        rho_midplane = galpy.potential.evaluateDensities(self.galactic_potential, self.R_over_R0_eval, 0., phi=0.)
 
         return rho_midplane
 

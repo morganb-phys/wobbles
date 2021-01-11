@@ -22,7 +22,7 @@ class DistributionFunction(object):
         :param nu [GIU]: the vertical frequency of the disk
         :param v_domain [GIU]: the velocity domain over which the phase space distribution is computed
         :param z_domain [GIU]: the vertial height over which the phase space distribution is computed
-        :param length_scale [PHYS]: a physial length scale for the vertical height
+        :param length_scale [PHYS]: a physical length scale for the vertical height
         :param velocity_scale [PHYS]: a physical velocity scale
         :param density_scale [PHYS]: a physical density scale
         """
