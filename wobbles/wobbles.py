@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from galpy.orbit import Orbit
 from scipy.integrate import simps, cumtrapz
 from galpy.util import bovy_plot
-import matplotlib.animation as animation
+#import matplotlib.animation as animation
 #from IPython.display import HTML
 from scipy.optimize import minimize
 from scipy.interpolate import interp1d
