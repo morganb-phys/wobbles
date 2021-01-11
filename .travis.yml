@@ -27,6 +27,6 @@ script:
   - pip install coveralls
   - coverage run --source=wobbles -m pytest tests/
   - coveralls
-#after_success:
-#    coveralls
+after_success:
+    coveralls
 
