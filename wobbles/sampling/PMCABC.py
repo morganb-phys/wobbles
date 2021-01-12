@@ -24,23 +24,27 @@ class Simulator(ProbabilisticModel, Continuous):
 
     def forward_simulate(self, params_sampled, k=1, rng=np.random.RandomState()):
 
-        log_prior = self.mcmc_class.prior_loglike(params_sampled)
+        # check for parameters that go out of bounds
+        check_finite = self.mcmc_class.prior_loglike(params_sampled)
+
+        # the prior probability is directly implemented through the sampling of over_hood
+        # parameters in PMCABC, and under_hood parameters in prior_class.draw. No need for
+        # an additional log_like term from the prior
+
         phase_space_res = self.mcmc_class._phase_space_res
 
-        if not np.isfinite(log_prior):
+        if not np.isfinite(check_finite):
             asymmetry = 100000 * np.ones(phase_space_res)
             mean_vz = 100000 * np.ones_like(phase_space_res)
 
         else:
 
+            # set the parameters sampled by abcpy to fixed
             samples_prior_list = self.mcmc_class.set_params(params_sampled)
+            # sample remaining parameters under the hood
+            samples = self.mcmc_class.prior_class.draw(samples_prior_list)
 
-            samples = {}
-            for param_prior in samples_prior_list:
-                param_name, value = self.mcmc_class.prior_class.draw(param_prior)
-                samples[param_name] = value
-
-            asymmetry, mean_vz = single_iteration(samples, *self._args_sampler)
+            asymmetry, mean_vz, density = single_iteration(samples, *self._args_sampler)
 
             if asymmetry is None or mean_vz is None:
                 # actually any array dim > 2 would work here

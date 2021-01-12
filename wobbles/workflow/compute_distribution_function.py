@@ -35,7 +35,8 @@ def compute_df_time_dependent(potential_extension_local, satellite_integration_t
     return df_list, dj_list, force_list
 
 def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential_list, velocity_dispersion_local,
-                component_amplitude=None, component_densities=None, rho_midplane=None, t_eval_orbits=None, verbose=False):
+                component_amplitude=None, component_densities=None, rho_midplane=None,
+               t_eval_orbits=None, verbose=False, kwargs_distribution_function={}):
 
     """
     This function executes a certain workflow sequence: From a the orbit of a passing satellite, compute the
@@ -62,6 +63,7 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
     :param t_eval_orbits: the times when to evaluate the orbits of test particles in phase space; if None, reverts to the
     same times as those used to sample the satellite orbit
     :param verbose: makes print statements appear
+    :param kwargs_distribution_function: additional keyword arguments for the DistributionFunction class
 
     :return: The distribution function, the perturbation to the action, and the force from the passing satellite
     """
@@ -81,6 +83,6 @@ def compute_df(disc, t_eval_satellite, satellite_orbit_list, satellite_potential
                                  disc_phase_space_orbits)
 
     dF = disc.distribution_function(delta_J, velocity_dispersion_local, rho_midplane, component_amplitude, component_densities,
-                                    verbose)
+                                    verbose, kwargs_distribution_function)
 
     return dF, delta_J, force

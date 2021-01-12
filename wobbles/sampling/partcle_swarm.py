@@ -86,7 +86,7 @@ class ParticleSwarmSampler(Base):
         if not np.isfinite(chi_square_prior):
             return 1e+9
 
-        asymmetry, mean_vz = self.model_data_from_params(parameters_sampled)
+        asymmetry, mean_vz, _ = self.model_data_from_params(parameters_sampled)
 
         model_data = [asymmetry, mean_vz]
 

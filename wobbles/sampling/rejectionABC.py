@@ -1,15 +1,64 @@
 from wobbles.workflow.forward_model import single_iteration
+from wobbles.sampling.data import Data
 import numpy as np
 from time import time
+
+class SimulationContainer(object):
+
+    def __init__(self, z_domain, simulated_asymmetry, simulated_mean_vz, simulated_params):
+
+        self.simulated_asymmetry = simulated_asymmetry
+        self.simulated_mean_vz = simulated_mean_vz
+        self.simulated_params = simulated_params
+        self.z_domain = z_domain
+
+    def _likelihood(self, z_observed, observed, simulated, uncertainties, model_percent_uncertainty):
+
+        data = Data(z_observed, observed, uncertainties)
+
+        N = simulated.shape[0]
+        n_points = simulated.shape[1]
+        chi_square = np.empty(N)
+
+        for i in range(0, N):
+
+            if model_percent_uncertainty is None:
+                model_uncertainties = np.zeros(n_points)
+            else:
+                model_uncertainties = model_percent_uncertainty * simulated[i, :]
+
+            x = simulated[i, :] * (1 + model_uncertainties)
+            chi_square[i] = data.chi_square(self.z_domain, x)
+
+        return chi_square
+
+    def likelihood_asymmetry(self, z_observed, observed_asymmetry, uncertainties, model_percent_uncertainty=None):
+
+        chi_square = self._likelihood(z_observed, observed_asymmetry, self.simulated_asymmetry, uncertainties,
+                                      model_percent_uncertainty)
+
+        self.chi_square_asymmetry = chi_square
+
+        return chi_square
+
+    def likelihood_meanvz(self, z_observed, observed_meanvz, uncertainties, model_percent_uncertainty=None):
+
+        chi_square = self._likelihood(z_observed, observed_meanvz, self.simulated_mean_vz, uncertainties,
+                                      model_percent_uncertainty)
+
+        self.chi_square_meanvz = chi_square
+
+        return chi_square
+
 
 class RejectionABCSampler(object):
 
     def __init__(self, prior_class, output_folder, args_sampler, run_index, Nrealizations,
-                 readout_steps=25, parallel=False, n_proc=None):
+                 readout_steps=25, parallel=False, n_proc=None, kwargs_sampler={}):
 
         # (self._tabpot, self._kde, self._phase_space_res) = args_sampler
         self._args_sampler = args_sampler
-
+        self._phase_space_dim = args_sampler[-1]
         self.run_index = run_index
         self.output_folder = output_folder
         self.Nrealizations = Nrealizations
@@ -17,6 +66,7 @@ class RejectionABCSampler(object):
         self.readout_steps = readout_steps
         self.parallel = parallel
         self.n_proc = n_proc
+        self._kwargs_sampler = kwargs_sampler
 
     def run(self, save_output=True, pool=None, verbose=False):
 
@@ -47,14 +97,14 @@ class RejectionABCSampler(object):
             if self.parallel:
 
                 t0 = time()
-                A, vz, new_params_sampled = self._run_pool(parameter_priors, save_params_list, pool)
+                A, vz, density, new_params_sampled = self._run_pool(parameter_priors, save_params_list, pool)
                 dt = np.round((time() - t0) / self.n_proc, 2)
                 if verbose:
                     print('sampling rate: ' + str(dt) + ' seconds per iteration')
 
             else:
                 t0 = time()
-                A, vz, new_params_sampled = self._run(parameter_priors, save_params_list)
+                A, vz, density, new_params_sampled = self._run(parameter_priors, save_params_list)
                 dt = np.round(time() - t0, 2)
                 if verbose:
                     print('sampling rate: ' + str(dt) + ' seconds per iteration')
@@ -64,10 +114,12 @@ class RejectionABCSampler(object):
                 params_sampled = new_params_sampled
                 asymmetry = A
                 mean_vz = vz
+                rho = density
             else:
                 params_sampled = np.vstack((params_sampled, new_params_sampled))
                 asymmetry = np.vstack((asymmetry, A))
                 mean_vz = np.vstack((mean_vz, vz))
+                rho = np.vstack((rho, density))
 
             count += 1
             if save_output and count < readout_steps:
@@ -95,6 +147,14 @@ class RejectionABCSampler(object):
                         string_to_write += '\n'
                     f.write(string_to_write)
 
+                with open(self.output_folder + 'density_' + str(self.run_index) + '.txt', 'a') as f:
+                    string_to_write = ''
+                    for row in range(0, rho.shape[0]):
+                        for rhoi in rho[row, :]:
+                            string_to_write += str(np.round(rhoi, 5)) + ' '
+                        string_to_write += '\n'
+                    f.write(string_to_write)
+
                 with open(self.output_folder + 'params_' + str(self.run_index) + '.txt', 'a') as f:
                     string_to_write = ''
                     for row in range(0, params_sampled.shape[0]):
@@ -113,49 +173,59 @@ class RejectionABCSampler(object):
         new_params_sampled = np.empty((self.n_proc, len(save_params_list)))
 
         for i in range(0, self.n_proc):
-            samples = {}
-            for param_prior in parameter_priors:
-                param_name, value = self.prior_class.draw(param_prior)
-                samples[param_name] = value
+
+            samples = self.prior_class.draw(parameter_priors)
             samples_list.append(samples)
 
             new_params = [samples[param] for param in save_params_list]
             new_params_sampled[i, :] = np.array(new_params)
 
+
         model_data = list(pool.map(self._func, samples_list))
 
         A_len = len(model_data[0][0])
         vz_len = len(model_data[0][1])
+        density_len = len(model_data[0][2])
         A, vz = np.empty((self.n_proc, A_len)), np.empty((self.n_proc, vz_len))
+        rho = np.empty((self.n_proc, density_len))
 
         for i, di in enumerate(model_data):
+
+            if model_data[i][0] is None or model_data[i][1] is None:
+                model_data[i][0] = np.ones(len(self._phase_space_dim)) * 1000
+                model_data[i][1] = np.ones(len(self._phase_space_dim)) * 1000
+                model_data[i][2] = np.ones(len(self._phase_space_dim)) * 1000
+
             A[i, :] = model_data[i][0]
             vz[i,:] = model_data[i][1]
+            rho[i,:] = model_data[i][2]
 
-        return A, vz, new_params_sampled
+        return A, vz, rho, new_params_sampled
 
     def _func(self, x):
 
-        A, vz = single_iteration(x, *self._args_sampler)
-        return (A, vz)
+        A, vz, rho = single_iteration(x, *self._args_sampler, **self._kwargs_sampler)
+
+        return (A, vz, rho)
 
     def _run(self, parameter_priors, save_params_list):
 
-        samples = {}
-        for param_prior in parameter_priors:
-
-            param_name, value = self.prior_class.draw(param_prior)
-            samples[param_name] = value
+        samples = self.prior_class.draw(parameter_priors)
 
         for param in save_params_list:
             assert param in samples.keys()
 
-        A, vz = single_iteration(samples, *self._args_sampler)
+        A, vz, rho = single_iteration(samples, *self._args_sampler, **self._kwargs_sampler)
+
+        if A is None or vz is None:
+            A = np.ones(len(self._phase_space_dim)) * 1000
+            vz = np.ones(len(self._phase_space_dim)) * 1000
+            rho = np.ones(len(self._phase_space_dim)) * 1000
 
         new_params_sampled = [samples[param] for param in save_params_list]
         new_params_sampled = np.array(new_params_sampled)
 
-        return A, vz, new_params_sampled
+        return A, vz, rho, new_params_sampled
 
 
 

@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
-
 class DataContainer(object):
 
     def __init__(self, z_a, a, delta_a, z_vz, v_z, delta_v_z, true_params=None):
@@ -38,7 +37,11 @@ class Data(object):
         for (z_i, data_i, error_i_absolute) in zip(self.zobs, self.data, self.errors):
 
             # assume a gaussian error
-            error_i = np.random.normal(0, error_i_absolute)
+            if error_i_absolute is None or error_i_absolute == 0:
+                error_i = 0.
+            else:
+                error_i = np.random.normal(0, error_i_absolute)
+
             model_data = interp_model(z_i) + error_i
             delta = model_data - data_i
             exponent += delta ** 2 / 0.05 ** 2

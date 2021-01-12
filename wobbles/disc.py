@@ -28,7 +28,8 @@ class Disc(object):
         self._units = potential_extension_local.units
 
     def distribution_function(self, delta_action, velocity_dispersion_local, rho_midplane=None,
-                              component_amplitude=None, component_densities=None, verbose=False):
+                              component_amplitude=None, component_densities=None, verbose=False,
+                              kwargs_distribution_function={}):
 
         """
         This routine computes a distribution function for the vertical density and velocity around the sun given a
@@ -116,7 +117,8 @@ class Disc(object):
 
         J = self.potential_extension_local.action + delta_action
         dF = DistributionFunction(rho_midplane, component_amplitude, vdis_local_units_internal, J, vertical_freq,
-                                  self._v_units_internal, self._z_units_internal, length_scale, velocity_scale, density_scale)
+                                  self._v_units_internal, self._z_units_internal, length_scale,
+                                  velocity_scale, density_scale, **kwargs_distribution_function)
 
         return dF
 

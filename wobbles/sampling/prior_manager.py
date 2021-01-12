@@ -1,4 +1,4 @@
-from abcpy.continuousmodels import Uniform, Normal
+from scipy.stats import multivariate_normal
 import numpy as np
 
 
@@ -13,46 +13,30 @@ class PriorBase(object):
 
         self.param_prior = param_prior
 
-    @classmethod
-    def from_params(cls, nfw_norm, disk_norm, log_sag_mass_DM, sag_mass2light, f_sub, log_mslope,
-                 m_host, velocity_dispersion_1, component_amplitude_1, velocity_dispersion_2, component_amplitude_2,
-                 velocity_dispersion_3, component_amplitude_3, orbit_ra, orbit_dec, orbit_z, orbit_pm_ra, orbit_pm_dec, orbit_los,
-                 gal_norm):
+    def draw(self, param_prior_list):
 
-        """
-                Format ['param_name', 'prior_type', [arg1, arg2], positive_definite_bool, under_hood_bool]
+        samples = {}
+        for param_prior in param_prior_list:
+            _param_name, _param_value = self._draw_single(param_prior)
 
-                """
-        param_prior = []
-        param_prior += nfw_norm
-        param_prior += disk_norm
-        param_prior += log_sag_mass_DM
-        param_prior += sag_mass2light
-        param_prior += f_sub
-        param_prior += log_mslope
-        param_prior += m_host
-        param_prior += velocity_dispersion_1
-        param_prior += component_amplitude_1
-        param_prior += velocity_dispersion_2
-        param_prior += component_amplitude_2
-        param_prior += velocity_dispersion_3
-        param_prior += component_amplitude_3
-        param_prior += orbit_ra
-        param_prior += orbit_dec
-        param_prior += orbit_z
-        param_prior += orbit_pm_ra
-        param_prior += orbit_pm_dec
-        param_prior += orbit_los
-        param_prior += gal_norm
-        return PriorBase(param_prior)
+            for pname, value in zip(_param_name, _param_value):
+                samples[pname] = value
+        return samples
 
     @staticmethod
-    def draw(param_prior):
+    def _draw_single(param_prior):
 
         param_name = param_prior[0]
         prior_type = param_prior[1]
         prior_args = param_prior[2]
         positive_definite = param_prior[3]
+
+        if isinstance(param_name, list):
+            assert prior_type == 'jg'
+            pdf = multivariate_normal(*prior_args)
+            values = pdf.rvs(1)
+            return param_name, values
+
         if prior_type == 'g':
             value = np.random.normal(*prior_args)
         elif prior_type == 'u':
@@ -64,7 +48,7 @@ class PriorBase(object):
         if positive_definite:
             value = abs(value)
 
-        return param_name, value
+        return [param_name], [value]
 
     @property
     def split_under_over_hood(self):
