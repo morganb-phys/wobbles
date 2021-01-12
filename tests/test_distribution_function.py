@@ -93,6 +93,27 @@ class TestDistributionFunction(object):
 
         npt.assert_array_less(np.absolute(df3.A), 1)
 
+    def test_function(self):
+
+        rho_midplane = 0.1
+        component_amplitude = [0.6, 0.3]
+        vdis = [20.5 / self.velocity_scale, 10 / self.velocity_scale]
+        J = self.potential_extension_local.action
+        delta_J = np.loadtxt(os.getcwd() + '/tests/delta_J_test.txt')
+        nu = self.potential_extension_local.vertical_freq
+
+        df = DistributionFunction(rho_midplane, component_amplitude, vdis, J + delta_J, nu,
+                                   self.v_domain, self.z_domain,
+                                   self.length_scale,
+                                   self.velocity_scale, self.density_scale, fill_value_interp='extrapolate',
+                                   interp_kind='linear')
+
+        function = df.function
+        weights = np.array(component_amplitude) / np.sum(component_amplitude)
+        function_2 = df.dF_list[0].f0 * weights[0] + df.dF_list[1].f0 * weights[1]
+        npt.assert_almost_equal(function, function_2)
+
+
 
 if __name__ == '__main__':
    pytest.main()

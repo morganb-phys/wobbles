@@ -36,6 +36,7 @@ class DistributionFunction(object):
         for norm, sigma in zip(normalization_list, velocity_dispersion_list):
             if sigma == 0:
                 raise Exception('cannot specify a velocity dispersion == 0')
+
             f = _SingleDistributionFunction(norm * rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale, velocity_scale,
                                             density_scale, z_ref=z_ref)
             dF_list.append(f)
@@ -50,6 +51,18 @@ class DistributionFunction(object):
         self.z = self.dF_list[0].z
         self.v = self.dF_list[0].v
         self.weights = np.array(normalization_list) / np.sum(normalization_list)
+
+    @property
+    def function(self):
+
+        """
+        :return: Returns the two dimensional distribution function
+        """
+
+        f = 0
+        for df, norm in zip(self.dF_list, self.weights):
+            f += df.f0 * norm
+        return f
 
     def velocity_moment(self, n):
 
