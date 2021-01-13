@@ -92,7 +92,6 @@ class TestComputeDistributionFunction(object):
 
     def test_multi_component_density(self):
 
-        rho1 = self.dF1.density
         rho2 = self.dF2.density
         rho3 = self.dF3.density
 
