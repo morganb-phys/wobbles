@@ -79,21 +79,34 @@ class DistributionFunction(object):
     @property
     def A(self):
 
-        log_density = np.log10(self.density)
-        interp_log = interp1d(self.z, log_density,
-                          **self._kwargs_interp)
+        """
+        Compute the asymmetry
+        :return:
+        """
 
-        zmin_max = np.max(self.z)
-
-        zplus = np.linspace(0, zmin_max, int(len(self.v)))
-        zminus = np.linspace(0, -zmin_max, int(len(self.v)))
-
-        log_rho_plus = interp_log(zplus)
-        log_rho_minus = interp_log(zminus)
-
-        rho_plus, rho_minus = 10 ** log_rho_plus, 10 ** log_rho_minus
-        A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
+        zs = 2. * self.z_ref - self.z
+        zf = np.sort(np.append(self.z, zs))
+        funcp = interp1d(self.z, np.log(self.density), **self._kwargs_interp)
+        p = np.exp(funcp(zf))
+        A = (p - p[::-1]) / (p + p[::-1])
+        zA = zf - self.z_ref
+        A = A[zA >= 0.]
         return A
+        # log_density = np.log10(self.density)
+        # interp_log = interp1d(self.z, log_density,
+        #                   **self._kwargs_interp)
+        #
+        # zmin_max = np.max(self.z)
+        #
+        # zplus = np.linspace(0, zmin_max, int(len(self.v)))
+        # zminus = np.linspace(0, -zmin_max, int(len(self.v)))
+        #
+        # log_rho_plus = interp_log(zplus)
+        # log_rho_minus = interp_log(zminus)
+        #
+        # rho_plus, rho_minus = 10 ** log_rho_plus, 10 ** log_rho_minus
+        # A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
+        # return A
 
     @property
     def density(self):
