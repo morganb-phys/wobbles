@@ -82,7 +82,7 @@ class RejectionABCSampler(object):
                 print(str(n_run) + ' iterations total and ' + str(self.n_proc) + ' jobs per iteration')
 
         else:
-            print('running without multiproccessing... ')
+
             n_run = self.Nrealizations
             readout_steps = self.readout_steps
             if verbose:
@@ -216,11 +216,11 @@ class RejectionABCSampler(object):
             assert param in samples.keys()
 
         A, vz, rho = single_iteration(samples, *self._args_sampler, **self._kwargs_sampler)
-
+        print(A)
         if A is None or vz is None:
-            A = np.ones(len(self._phase_space_dim)) * 1000
-            vz = np.ones(len(self._phase_space_dim)) * 1000
-            rho = np.ones(len(self._phase_space_dim)) * 1000
+            A = np.ones(self._phase_space_dim) * 1000
+            vz = np.ones(self._phase_space_dim) * 1000
+            rho = np.ones(self._phase_space_dim) * 1000
 
         new_params_sampled = [samples[param] for param in save_params_list]
         new_params_sampled = np.array(new_params_sampled)

@@ -6,7 +6,8 @@ from scipy.interpolate import interp1d
 class DistributionFunction(object):
 
     def __init__(self, rho_midplane, normalization_list, velocity_dispersion_list, J, nu, v_domain, z_domain, length_scale,
-                 velocity_scale, density_scale, fill_value_interp='extrapolate', interp_kind='cubic', z_ref=None):
+                 velocity_scale, density_scale, fill_value_interp='extrapolate',
+                 interp_kind='cubic', z_ref=None, fit_zref=False):
 
         """
         Constructs a distribution function for the disk as a sum of quasi-isothermal distribution functions
@@ -51,6 +52,7 @@ class DistributionFunction(object):
         self.z = self.dF_list[0].z
         self.v = self.dF_list[0].v
         self.weights = np.array(normalization_list) / np.sum(normalization_list)
+        self._fit_zref = fit_zref
 
     @property
     def function(self):
@@ -83,13 +85,18 @@ class DistributionFunction(object):
         Compute the asymmetry
         :return:
         """
+        if self._fit_zref:
+            zs = 2. * self.z_ref - self.z
+            zf = np.sort(np.append(self.z, zs))
+            ref = self.z_ref
+        else:
+            zf = np.sort(self.z)
+            ref = 0.
 
-        zs = 2. * self.z_ref - self.z
-        zf = np.sort(np.append(self.z, zs))
         funcp = interp1d(self.z, np.log(self.density), **self._kwargs_interp)
         p = np.exp(funcp(zf))
         A = (p - p[::-1]) / (p + p[::-1])
-        zA = zf - self.z_ref
+        zA = zf - ref
         A = A[zA >= 0.]
         return A
         # log_density = np.log10(self.density)
