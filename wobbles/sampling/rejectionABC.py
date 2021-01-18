@@ -129,6 +129,22 @@ class RejectionABCSampler(object):
 
             if readout and save_output:
 
+                info = {}
+                for param in parameter_priors:
+                    name = param[0]
+                    prior_type = param[1]
+
+                    if prior_type == 'u':
+                        ran = [param[2][0], param[2][1]]
+                    elif prior_type == 'g':
+                        ran = [param[2][0] - 3 * param[2][1], param[2][0] + 3 * param[2][1]]
+                    else:
+                        continue
+
+                    info[name] = ran
+                with open(self.output_folder + 'param_names_ranges.txt', 'w') as f:
+                    f.write(str(info))
+
                 init_arrays = True
                 count = 0
                 with open(self.output_folder + 'asymmetry_' + str(self.run_index) + '.txt', 'a') as f:
@@ -216,7 +232,7 @@ class RejectionABCSampler(object):
             assert param in samples.keys()
 
         A, vz, rho = single_iteration(samples, *self._args_sampler, **self._kwargs_sampler)
-        print(A)
+
         if A is None or vz is None:
             A = np.ones(self._phase_space_dim) * 1000
             vz = np.ones(self._phase_space_dim) * 1000
