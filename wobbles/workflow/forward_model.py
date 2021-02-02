@@ -59,8 +59,6 @@ def sample_sag_orbit():
 
 def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res, **kwargs):
 
-    # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
-
     try:
         potential_local = tabulated_potential.evaluate(samples['rho_nfw'],
                                                    samples['rho_midplane'])
@@ -93,7 +91,15 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
     assert np.sum(component_amplitude) == 1
 
     galactic_potential = sample_galactic_potential(samples['gal_norm'])
-
+    if 'include_LMC' in kwargs.keys() and kwargs['include_LMC']:
+        assert 'log_LMC_mass' in samples.keys()
+        LMC_mass = 10 ** samples['log_LMC_mass']
+        c = sample_concentration_herquist(LMC_mass, 17.5)
+        LMC_potential = HernquistPotential(amp=0.5 * LMC_mass * apu.solMass, a=c * apu.kpc)
+        lmc_orbit = Orbit.from_name('LMC')
+        lmc_orbit.integrate(time_Gyr, galactic_potential)
+        galactic_potential += MovingObjectPotential(lmc_orbit, LMC_potential, ro=potential_local.units['ro'],
+                                                    vo=potential_local.units['vo'])
     z_min_max = 2.
     vmin_max = 100.
     potential_global = PotentialExtension(galactic_potential, z_min_max, vmin_max, phase_space_res,
@@ -106,11 +112,10 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
         subhalo_orbit_list, halo_potentials = render_subhalos(mlow, mhigh, samples['f_sub'],
                                                               samples['log_slope'], samples['m_host'],
                                                               kde_instance, samples['c8'], galactic_potential, potential_global,
-                                                              time_Gyr, mdef='HERNQUIST', dr_max=8,
+                                                              time_Gyr, mdef='HERNQUIST', dr_max=10,
                                                               pass_through_disk_limit=3)
 
     dwarf_orbits, dwarf_galaxy_potentials = [], []
-
     if 'include_dwarfs' in kwargs.keys() and kwargs['include_dwarfs']:
         o = Orbit.from_name('MW satellite galaxies')
         names = o.name
@@ -122,22 +127,13 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
         for i, name in enumerate(dwarf_names):
             o = Orbit.from_name(name)
             if o.r() < kwargs['r_min_dwarfs'] and name != 'Sgr':
-                o.integrate(time_Gyr, potential_global.galactic_potential)
+                o.integrate(time_Gyr, galactic_potential)
+                o.turn_physical_off()
                 dwarf_orbits += [o]
                 kept_names.append(name)
 
         dwarf_galaxy_potentials, _ = dwarf_galaxies(kept_names, include_no_data=True,
                                                     log_mass_mean=8, log_mass_sigma=0.5)
-
-    if 'include_LMC' in kwargs.keys() and kwargs['include_LMC']:
-        assert 'log_LMC_mass' in samples.keys()
-        LMC_mass = 10 ** samples['log_LMC_mass']
-        c = sample_concentration_herquist(LMC_mass, 17.5)
-        LMC_potential = HernquistPotential(amp=0.5 * LMC_mass * apu.solMass, a=c * apu.kpc)
-        lmc_orbit = Orbit.from_name('LMC')
-        lmc_orbit.integrate(time_Gyr, potential_global.galactic_potential)
-        galactic_potential += MovingObjectPotential(lmc_orbit, LMC_potential, ro=potential_local.units['ro'],
-                                                    vo=potential_local.units['vo'])
 
     ####################################### Integrate orbit of Sag. #################################
     orbit_init_sag = [samples['orbit_ra'] * apu.deg, samples['orbit_dec'] * apu.deg,
