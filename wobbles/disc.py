@@ -101,22 +101,18 @@ class Disc(object):
             raise Exception('if component amplitude or component_density is specified as a list, it must be the same length as '
                             'velocity_dispersion')
 
-        vdis_local_units_internal = []
-        for vdis in velocity_dispersion_local:
-            vdis_local_units_internal.append(vdis / velocity_scale)
-
         vertical_freq = self.potential_extension_local.vertical_freq
 
         if verbose:
-            for i, (vdis, norm) in enumerate(zip(vdis_local_units_internal, component_amplitude)):
-                print('velocity dispersion '+str(i)+' (km/sec): ', vdis * velocity_scale)
+            for i, (vdis, norm) in enumerate(zip(velocity_dispersion_local, component_amplitude)):
+                print('velocity dispersion '+str(i)+' (km/sec): ', vdis)
                 print('amplitude of component '+str(i) + ': ', norm)
                 print('density ' + str(i) + ' (km/sec): ', norm * rho_midplane * density_scale)
             print('vertical frequency: ', vertical_freq)
             print('\n')
 
         J = self.potential_extension_local.action + delta_action
-        dF = DistributionFunction(rho_midplane, component_amplitude, vdis_local_units_internal, J, vertical_freq,
+        dF = DistributionFunction(rho_midplane, component_amplitude, velocity_dispersion_local, J, vertical_freq,
                                   self._v_units_internal, self._z_units_internal, length_scale,
                                   velocity_scale, density_scale, **kwargs_distribution_function)
 

@@ -12,13 +12,9 @@ class DistributionFunction(object):
         """
         Constructs a distribution function for the disk as a sum of quasi-isothermal distribution functions
 
-        unit: [GIU] means [galpy internal units]
-        unit: [PHYS] means a physical unit
-        unit: [F] means a floating point number
-
-        :param rho_midplane [GIU]: the midplane density of the disk in galpy internal units
-        :param normalization_list [F]: a list of normalizations for each component; must add to one
-        :param velocity_dispersion_list [GIU]: a list of velocity dispersions for each component of the disk
+        :param rho_midplane: the midplane density of the disk in physical units
+        :param normalization_list: a list of normalizations for each component; must add to one
+        :param velocity_dispersion_list: a list of velocity dispersions sigma(v) for each component of the disk in km/sec
         :param J [GIU]: the vertical action computed for each point in phase space
         :param nu [GIU]: the vertical frequency of the disk
         :param v_domain [GIU]: the velocity domain over which the phase space distribution is computed
@@ -157,9 +153,10 @@ class _SingleDistributionFunction(object):
 
     def __init__(self, rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale,
                  velocity_scale, density_scale, z_ref=None):
+
         """ exp(J * nu / sigma^2)"""
         self.rho0 = rho_midplane
-        self.sigma0 = sigma
+        self.sigma0 = sigma/velocity_scale
         self.J = J
         self.nu = nu
 
@@ -193,7 +190,6 @@ class _SingleDistributionFunction(object):
 
         f0 = self.f0
         v_integrand = (self._vdom[None, :] * self.velocity_scale) ** n
-
         return simps(f0 * v_integrand, axis=1) / self.normalization
 
     @property
@@ -221,4 +217,4 @@ class _SingleDistributionFunction(object):
     @property
     def velocity_dispersion(self):
 
-        return np.sqrt(self.velocity_moment(2) - self.velocity_moment(1) ** 2)
+        return self.velocity_moment(2) - self.velocity_moment(1) ** 2

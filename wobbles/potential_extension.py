@@ -27,9 +27,6 @@ class PotentialExtension(object):
         """
         self.galactic_potential = galactic_potential
 
-        self.velocity_scale = vz_min_max_kmsec
-        self.length_scale = z_min_max_kpc
-
         self.R_over_R0_eval = R_over_R0_eval
         self._velocity_dispersion_local = velocity_dispersion_local
         self.vertical_disk_potential = [galpy.potential.toVerticalPotential(galactic_potential, self.R_over_R0_eval,
@@ -37,6 +34,9 @@ class PotentialExtension(object):
 
         self.z_units_internal, self.v_units_internal, galactic_potential_physical_off, self.units = self._coordinate_system(z_min_max_kpc,
                                                                               vz_min_max_kmsec, phase_space_N, galactic_potential)
+
+        self.velocity_scale = self.units['vo']
+        self.length_scale = self.units['ro']
 
         self.galactic_potential_physical_off = galactic_potential_physical_off
         self.vertical_disk_potential_physical_off = [galpy.potential.toVerticalPotential(galactic_potential_physical_off,
