@@ -3,6 +3,12 @@ from scipy.optimize import minimize
 
 def fit_sec_squared(rho, z):
 
+    """
+    This routine fits a curve given by rho(z) with a secant^2 function
+    :param rho: a curve
+    :param z: points at which rho is evaluated
+    :return: the normalization, centroid position (or maximum position), and scale height
+    """
     guess = np.array([np.max(rho), 0., 0.02])
     opt = minimize(_sec_square_func_to_min, x0=guess, args=(z, rho))
 

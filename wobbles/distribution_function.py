@@ -6,18 +6,15 @@ from scipy.interpolate import interp1d
 class DistributionFunction(object):
 
     def __init__(self, rho_midplane, normalization_list, velocity_dispersion_list, J, nu, v_domain, z_domain, length_scale,
-                 velocity_scale, density_scale, fill_value_interp='extrapolate', interp_kind='cubic', z_ref=None):
+                 velocity_scale, density_scale, fill_value_interp='extrapolate',
+                 interp_kind='cubic', z_ref=None, fit_zref=False):
 
         """
         Constructs a distribution function for the disk as a sum of quasi-isothermal distribution functions
 
-        unit: [GIU] means [galpy internal units]
-        unit: [PHYS] means a physical unit
-        unit: [F] means a floating point number
-
-        :param rho_midplane [GIU]: the midplane density of the disk in galpy internal units
-        :param normalization_list [F]: a list of normalizations for each component; must add to one
-        :param velocity_dispersion_list [GIU]: a list of velocity dispersions for each component of the disk
+        :param rho_midplane: the midplane density of the disk in physical units
+        :param normalization_list: a list of normalizations for each component; must add to one
+        :param velocity_dispersion_list: a list of velocity dispersions sigma(v) for each component of the disk in km/sec
         :param J [GIU]: the vertical action computed for each point in phase space
         :param nu [GIU]: the vertical frequency of the disk
         :param v_domain [GIU]: the velocity domain over which the phase space distribution is computed
@@ -51,6 +48,7 @@ class DistributionFunction(object):
         self.z = self.dF_list[0].z
         self.v = self.dF_list[0].v
         self.weights = np.array(normalization_list) / np.sum(normalization_list)
+        self._fit_zref = fit_zref
 
     @property
     def function(self):
@@ -79,21 +77,39 @@ class DistributionFunction(object):
     @property
     def A(self):
 
-        log_density = np.log10(self.density)
-        interp_log = interp1d(self.z, log_density,
-                          **self._kwargs_interp)
+        """
+        Compute the asymmetry
+        :return:
+        """
+        if self._fit_zref:
+            zs = 2. * self.z_ref - self.z
+            zf = np.sort(np.append(self.z, zs))
+            ref = self.z_ref
+        else:
+            zf = np.sort(self.z)
+            ref = 0.
 
-        zmin_max = np.max(self.z)
-
-        zplus = np.linspace(0, zmin_max, int(len(self.v)))
-        zminus = np.linspace(0, -zmin_max, int(len(self.v)))
-
-        log_rho_plus = interp_log(zplus)
-        log_rho_minus = interp_log(zminus)
-
-        rho_plus, rho_minus = 10 ** log_rho_plus, 10 ** log_rho_minus
-        A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
+        funcp = interp1d(self.z, np.log(self.density), **self._kwargs_interp)
+        p = np.exp(funcp(zf))
+        A = (p - p[::-1]) / (p + p[::-1])
+        zA = zf - ref
+        A = A[zA >= 0.]
         return A
+        # log_density = np.log10(self.density)
+        # interp_log = interp1d(self.z, log_density,
+        #                   **self._kwargs_interp)
+        #
+        # zmin_max = np.max(self.z)
+        #
+        # zplus = np.linspace(0, zmin_max, int(len(self.v)))
+        # zminus = np.linspace(0, -zmin_max, int(len(self.v)))
+        #
+        # log_rho_plus = interp_log(zplus)
+        # log_rho_minus = interp_log(zminus)
+        #
+        # rho_plus, rho_minus = 10 ** log_rho_plus, 10 ** log_rho_minus
+        # A = (rho_plus - rho_minus) / (rho_plus + rho_minus)
+        # return A
 
     @property
     def density(self):
@@ -137,9 +153,10 @@ class _SingleDistributionFunction(object):
 
     def __init__(self, rho_midplane, sigma, J, nu, v_domain, z_domain, length_scale,
                  velocity_scale, density_scale, z_ref=None):
+
         """ exp(J * nu / sigma^2)"""
         self.rho0 = rho_midplane
-        self.sigma0 = sigma
+        self.sigma0 = sigma/velocity_scale
         self.J = J
         self.nu = nu
 
@@ -173,7 +190,6 @@ class _SingleDistributionFunction(object):
 
         f0 = self.f0
         v_integrand = (self._vdom[None, :] * self.velocity_scale) ** n
-
         return simps(f0 * v_integrand, axis=1) / self.normalization
 
     @property
@@ -201,4 +217,4 @@ class _SingleDistributionFunction(object):
     @property
     def velocity_dispersion(self):
 
-        return np.sqrt(self.velocity_moment(2) - self.velocity_moment(1) ** 2)
+        return self.velocity_moment(2) - self.velocity_moment(1) ** 2

@@ -12,7 +12,8 @@ def dwarf_galaxies(names, include_no_data=True,
                'UrsaMinor': 8.9, 'Draco': 9.5, 'CanesVenaticiI': 8.5, 'CraterII': 7., 'LeoT': 9.8, 'Hercules': 7.1,
                'BootesI': 6.4, 'LeoIV': 7.2, 'UrsaMajorI': 8.5, 'UrsaMajorII': 9.1,
               'CanesVenaticiII': 8.7, 'ComaBerenices': 8.6,
-               'BootesII': 10.4, 'Willman1': 10.4, 'Segue2': 9., 'Segue1': 9.8, 'LeoV': 7.5}
+               'BootesII': 10.4, 'Willman1': 10.4, 'Segue2': 9., 'Segue1': 9.8, 'LeoV': 7.5,
+              'LMC': np.log10(2 * 10 ** 11)}
 
     dwarf_masses = []
     dwarf_names = []

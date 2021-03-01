@@ -1,8 +1,34 @@
 import pytest
 import numpy.testing as npt
+import numpy as np
+from scipy.optimize import minimize
 from galpy.potential import NFWPotential, MiyamotoNagaiPotential, PowerSphericalPotentialwCutoff
 from wobbles.potential_extension import PotentialExtension
-from wobbles.workflow.tabulate_pot import TabulatedPotential, TabulatedPotential3D
+from wobbles.workflow.tabulate_pot import TabulatedPotential, TabulatedPotential3D, solve_normalizations
+from galpy.potential import evaluateDensities
+
+class TestComputationRoutines(object):
+
+    def setup(self):
+
+        self.density_conversion = 0.1758345842
+        self.rho_nfw_target = 0.0079 # in M_sun / pc^2
+        self.rho_midplane_target = 0.15 # M_sun / pc^2
+
+    def test_minimize_func(self):
+
+        disk_norm, nfw_norm = solve_normalizations(self.rho_nfw_target, self.rho_midplane_target, self.density_conversion)
+
+        pot = [PowerSphericalPotentialwCutoff(normalize=0.05, alpha=1.8,
+                                                             rc=1.9 / 8.),
+                              MiyamotoNagaiPotential(a=3. / 8., b=0.28 / 8., normalize=disk_norm),
+                              NFWPotential(a=2., normalize=nfw_norm)]
+        rho = evaluateDensities(pot, R=1., z=0) * self.density_conversion
+        npt.assert_almost_equal(rho, self.rho_midplane_target, 3)
+
+        disk_norm, nfw_norm = solve_normalizations(self.rho_nfw_target, self.rho_nfw_target * 0.5,
+                                                   self.density_conversion)
+        npt.assert_equal(True, disk_norm < 0)
 
 class TestTabulatePotential2D(object):
 

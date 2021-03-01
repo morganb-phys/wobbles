@@ -3,6 +3,7 @@ from wobbles.workflow.integrate_single_orbit import integrate_orbit
 from wobbles.workflow.subhalos_and_dwarfs import *
 from galpy.potential.mwpotentials import PowerSphericalPotentialwCutoff, MiyamotoNagaiPotential
 from wobbles.disc import Disc
+from galpy.potential import MovingObjectPotential
 import os
 import numpy as np
 
@@ -58,18 +59,16 @@ def sample_sag_orbit():
 
 def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res, **kwargs):
 
-    # f is the mass fraction contained in halos between 10^6 and 10^10, CDM prediction is a few percent
-
     try:
-        potential_local = tabulated_potential.evaluate(samples['nfw_norm'],
-                                                   samples['disk_norm'])
+        potential_local = tabulated_potential.evaluate(samples['rho_nfw'],
+                                                   samples['rho_midplane'])
 
     except:
         # prior sampled out of bounds
         # print('out of bounds: ', samples['nfw_norm'], samples['disk_norm'])
         return None, None, None
 
-    keywords = ['nfw_norm', 'disk_norm',
+    keywords = ['rho_midplane', 'rho_midplane',
                 'log_sag_mass_DM', 'sag_mass2light',
                 'f_sub', 'log_slope', 'm_host',
                 'velocity_dispersion_1', 'velocity_dispersion_2', 'velocity_dispersion_3',
@@ -92,9 +91,23 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
     assert np.sum(component_amplitude) == 1
 
     galactic_potential = sample_galactic_potential(samples['gal_norm'])
-
-    potential_global = PotentialExtension(galactic_potential, 2, 120, phase_space_res,
+    z_min_max = 2.
+    vmin_max = 100.
+    potential_global = PotentialExtension(galactic_potential, z_min_max, vmin_max, phase_space_res,
                                           compute_action_angle=False)
+    if 'include_LMC' in kwargs.keys() and kwargs['include_LMC']:
+        assert 'log_LMC_mass' in samples.keys()
+        LMC_mass = 10 ** samples['log_LMC_mass']
+        c = sample_concentration_herquist(LMC_mass, 17.5)
+        LMC_potential = HernquistPotential(amp=0.5 * LMC_mass * apu.solMass, a=c * apu.kpc)
+        lmc_orbit = Orbit.from_name('LMC')
+        lmc_orbit.integrate(time_Gyr, galactic_potential)
+        galactic_potential_for_integrations = galactic_potential + MovingObjectPotential(
+            lmc_orbit, LMC_potential,
+            ro=potential_local.units['ro'],
+            vo=potential_local.units['vo'])
+    else:
+        galactic_potential_for_integrations = galactic_potential
 
     subhalo_orbit_list, halo_potentials = [], []
     if samples['f_sub'] > 0:
@@ -102,8 +115,10 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
         print('creating subhalos... ')
         subhalo_orbit_list, halo_potentials = render_subhalos(mlow, mhigh, samples['f_sub'],
                                                               samples['log_slope'], samples['m_host'],
-                                                              kde_instance, samples['c8'], galactic_potential, potential_global,
-                                                              time_Gyr, mdef='HERNQUIST', dr_max=8,
+                                                              kde_instance, samples['c8'],
+                                                              galactic_potential_for_integrations,
+                                                              potential_global,
+                                                              time_Gyr, mdef='HERNQUIST', dr_max=10,
                                                               pass_through_disk_limit=3)
 
     dwarf_orbits, dwarf_galaxy_potentials = [], []
@@ -118,9 +133,12 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
         for i, name in enumerate(dwarf_names):
             o = Orbit.from_name(name)
             if o.r() < kwargs['r_min_dwarfs'] and name != 'Sgr':
-                o.integrate(time_Gyr, potential_global.galactic_potential)
+
+                o.integrate(time_Gyr, galactic_potential_for_integrations)
+                o.turn_physical_off()
                 dwarf_orbits += [o]
                 kept_names.append(name)
+
         dwarf_galaxy_potentials, _ = dwarf_galaxies(kept_names, include_no_data=True,
                                                     log_mass_mean=8, log_mass_sigma=0.5)
 
@@ -129,9 +147,8 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
                       samples['orbit_z'] * apu.kpc,
                       samples['orbit_pm_ra'] * apu.mas / apu.yr, samples['orbit_pm_dec'] * apu.mas / apu.yr,
                       samples['orbit_vlos'] * apu.km / apu.s]
-    sag_orbit_phsical_off = integrate_orbit(orbit_init_sag, galactic_potential, time_Gyr)
+    sag_orbit_phsical_off = integrate_orbit(orbit_init_sag, galactic_potential_for_integrations, time_Gyr)
     sag_orbit = [sag_orbit_phsical_off]
-
     #######################################################################################################
 
     ####################################### Set Sag. properties ########################################
@@ -160,10 +177,8 @@ def single_iteration(samples, tabulated_potential, kde_instance, phase_space_res
 
     asymmetry, mean_vz, density = dF.A, dF.mean_v_relative, dF.density
     # import matplotlib.pyplot as plt
-    # plt.plot(asymmetry)
-    # plt.show()
-    # print(samples)
-    # a=input('continue')
+    # plt.plot(asymmetry, color='k')
+
     return asymmetry, mean_vz, density
 
 # param_prior = []

@@ -82,7 +82,7 @@ class RejectionABCSampler(object):
                 print(str(n_run) + ' iterations total and ' + str(self.n_proc) + ' jobs per iteration')
 
         else:
-            print('running without multiproccessing... ')
+
             n_run = self.Nrealizations
             readout_steps = self.readout_steps
             if verbose:
@@ -128,6 +128,22 @@ class RejectionABCSampler(object):
                 readout = True
 
             if readout and save_output:
+
+                info = {}
+                for param in parameter_priors:
+                    name = param[0]
+                    prior_type = param[1]
+
+                    if prior_type == 'u':
+                        ran = [param[2][0], param[2][1]]
+                    elif prior_type == 'g':
+                        ran = [param[2][0] - 3 * param[2][1], param[2][0] + 3 * param[2][1]]
+                    else:
+                        continue
+
+                    info[name] = ran
+                with open(self.output_folder + 'param_names_ranges.txt', 'w') as f:
+                    f.write(str(info))
 
                 init_arrays = True
                 count = 0
@@ -218,9 +234,9 @@ class RejectionABCSampler(object):
         A, vz, rho = single_iteration(samples, *self._args_sampler, **self._kwargs_sampler)
 
         if A is None or vz is None:
-            A = np.ones(len(self._phase_space_dim)) * 1000
-            vz = np.ones(len(self._phase_space_dim)) * 1000
-            rho = np.ones(len(self._phase_space_dim)) * 1000
+            A = np.ones(self._phase_space_dim) * 1000
+            vz = np.ones(self._phase_space_dim) * 1000
+            rho = np.ones(self._phase_space_dim) * 1000
 
         new_params_sampled = [samples[param] for param in save_params_list]
         new_params_sampled = np.array(new_params_sampled)

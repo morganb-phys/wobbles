@@ -2,10 +2,54 @@ import numpy as np
 from galpy.potential import NFWPotential
 from galpy.potential import MiyamotoNagaiPotential
 from galpy.potential import PowerSphericalPotentialwCutoff
-from wobbles.potential_extension import PotentialExtension
-import pickle
-import sys
-import os
+from galpy.potential import evaluateDensities
+from scipy.optimize import minimize
+
+
+def minimize_function(x, rho_nfw_target, rho_midplane_target, density_conversion):
+    """
+    Computes the chi^2 penalty for a galactic potential for the purpose of finding an NFWPotential and MiyamotoNagaiPotential
+    circular velocity normalization that yeild the desired midplane and nfw physical densities
+    :param x: numpy array of proposed disk and nfw circular velocity normalizations (in that order)
+    :param rho_nfw_target: desired nfw_normalization in physical M_sun / pc^2
+    :param rho_midplane_target: desired midplane density in physical M_sun / pc^2
+    :param density_conversion: a conversion factor between galpy internal density units and physical M_sun / pc^2
+    :return: chi^2 penalty
+    """
+
+    galactic_potential = [PowerSphericalPotentialwCutoff(normalize=0.05, alpha=1.8,
+                                                         rc=1.9 / 8.),
+                          MiyamotoNagaiPotential(a=3. / 8., b=0.28 / 8., normalize=x[0]),
+                          NFWPotential(a=2., normalize=x[1])]
+    nfw_potential = NFWPotential(a=2., normalize=x[1])
+
+    rho = evaluateDensities(galactic_potential, R=1., z=0.) * density_conversion
+    rho_nfw = evaluateDensities(nfw_potential, R=1, z=0.) * density_conversion
+    dx = (rho - rho_midplane_target) ** 2 / 0.000001 ** 2 + (rho_nfw - rho_nfw_target) ** 2 / 0.000001 ** 2
+
+    return dx ** 0.5
+
+def solve_normalizations(rho_nfw_target, rho_midplane_target, density_conversion):
+
+    """
+    Solves for the circular velocity normalization parameters for MiyamotoNagai and NFWPotential circular velocities that
+    yield the desired NFW and midplne densities
+    :param rho_nfw_target: desired nfw_normalization in physical M_sun / pc^2
+    :param rho_midplane_target: desired midplane density in physical M_sun / pc^2
+    :param density_conversion: a conversion factor between galpy internal density units and physical M_sun / pc^2
+    :return: MiyamotoNagai and NFWPotential circular velocity normalizations
+    """
+
+    nfw_norm_init = 0.35 * (rho_nfw_target / 0.007)
+    rho_mid_init = 0.6 * (rho_midplane_target/0.1)
+    disk_norm_init = rho_mid_init - nfw_norm_init
+
+    x0 = np.array([disk_norm_init, nfw_norm_init])
+
+    opt = minimize(minimize_function, x0=x0, args=(rho_nfw_target, rho_midplane_target, density_conversion),
+                   method='Nelder-Mead')
+
+    return opt['x'][0], opt['x'][1]
 
 class TabulatedPotential3D(object):
 

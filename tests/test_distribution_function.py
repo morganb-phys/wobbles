@@ -11,9 +11,15 @@ class TestDistributionFunction(object):
     def setup(self):
 
         path = os.getcwd()
-        f = open(path + '/tests/MW14pot_100', "rb")
-        self.potential_extension_global = pickle.load(f)
-        f.close()
+        try:
+            f = open(path + '/tests/MW14pot_100', "rb")
+            self.potential_extension_global = pickle.load(f)
+            f.close()
+        except:
+            f = open(path + '/MW14pot_100', "rb")
+            self.potential_extension_global = pickle.load(f)
+            f.close()
+
         self.potential_extension_local = self.potential_extension_global
 
         self.J = self.potential_extension_local.action
@@ -81,7 +87,7 @@ class TestDistributionFunction(object):
         rho_midplane_physical = [rho_midplane_value * component_amplitude[0],
                                  rho_midplane_value * component_amplitude[1]]
         rho_midplane = [rho_midplane_physical[0] / self.density_scale, rho_midplane_physical[1] / self.density_scale]
-        vdis = [20.5 / self.velocity_scale, 4 / self.velocity_scale]
+        vdis = [20.5, 4]
 
         delta_J = np.loadtxt(os.getcwd() + '/tests/delta_J_test.txt')
 
@@ -97,7 +103,7 @@ class TestDistributionFunction(object):
 
         rho_midplane = 0.1
         component_amplitude = [0.6, 0.3]
-        vdis = [20.5 / self.velocity_scale, 10 / self.velocity_scale]
+        vdis = [20.5, 10]
         J = self.potential_extension_local.action
         delta_J = np.loadtxt(os.getcwd() + '/tests/delta_J_test.txt')
         nu = self.potential_extension_local.vertical_freq
@@ -113,7 +119,31 @@ class TestDistributionFunction(object):
         function_2 = df.dF_list[0].f0 * weights[0] + df.dF_list[1].f0 * weights[1]
         npt.assert_almost_equal(function, function_2)
 
+    def test_velocity_dispersion(self):
+
+        rho_midplane = 0.1
+        component_amplitude = [1.]
+        vdis = [30.5]
+        J = self.potential_extension_local.action
+        nu = self.potential_extension_local.vertical_freq
+        delta_J = 0.
+        df = DistributionFunction(rho_midplane, component_amplitude, vdis, J + delta_J, nu,
+                                  self.v_domain, self.z_domain,
+                                  self.length_scale,
+                                  self.velocity_scale, self.density_scale)
+        f0 = df.function
+        import matplotlib.pyplot as plt
+
+        vz_cols = np.zeros_like(f0)
+        for col in range(vz_cols.shape[1]):
+            vz_cols[:,col] = self.v_domain[col] * self.velocity_scale
+
+        plt.plot(df.velocity_dispersion); plt.show()
 
 
-if __name__ == '__main__':
-   pytest.main()
+t = TestDistributionFunction()
+t.setup()
+t.test_velocity_dispersion()
+
+# if __name__ == '__main__':
+#    pytest.main()
